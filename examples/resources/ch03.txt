@@ -1,0 +1,1076 @@
+chapter: Working with XML and Java
+==================
+<catalog>
+    <book sku="123_xaa">
+        <title>King Lear</title>
+        <author>William Shakespeare</author>
+        <price>6.95</price>
+        <category>classics</category>
+    </book>
+    <book sku="988_yty">
+        <title>Hamlet</title>
+        <author>William Shakespeare</author>
+        <price>5.95</price>
+        <category>classics</category>
+    </book>
+    <book sku="434_asd">
+        <title>1984</title>
+        <author>George Orwell</author>
+        <price>12.95</price>
+        <category>classics</category>
+    </book>
+    <book sku="876_pep">
+        <title>Java Generics and Collections</title>
+        <authors>
+            <author>Maurice Naftalin</author>
+            <author>Phillip Wadler</author>
+        </authors>
+        <price>34.99</price>
+        <category>programming</category>
+    </book>
+</catalog>
+    
+    
+====================================
+Example: Using the Cursor parsing method of parsing in StAX.
+
+package com.sc.ch02.stax;
+
+import static java.lang.System.out;
+
+import java.io.InputStream;
+import java.util.Set;
+import java.util.TreeSet;
+
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.events.XMLEvent;
+
+public class StaxCursor {
+    private static final String db = "/ch02/Catalog.xml";
+
+    //we'll hold values here as we find them
+    private Set<String> uniqueAuthors;
+
+    public static void main(String... args) {
+        StaxCursor p = new StaxCursor();
+        p.find();
+    }
+
+    //constructor
+    public StaxCursor() {
+        uniqueAuthors = new TreeSet<String>();
+    }
+
+    //parse the document and offload work to helpers
+    public void find() {
+        XMLInputFactory xif = XMLInputFactory.newInstance();
+        //forward-only, most efficient way to read
+        XMLStreamReader reader = null;
+
+        //get ahold of the file
+        final InputStream is = 
+            StaxCursor.class.getResourceAsStream(db);
+
+        //whether current event represents elem, attrib, etc
+        int eventType;
+        String current = "";
+
+        try {
+            //create the reader from the stream
+            reader = xif.createXMLStreamReader(is);
+
+            //work with stream and get the type of event 
+            //we're inspecting
+            while (reader.hasNext()) {
+                //because this is Cursor, we get an integer token to next event
+                eventType = reader.next();
+
+                //do different work depending on current event
+                switch (eventType) {
+                case XMLEvent.START_ELEMENT:
+                    //save element name for later
+                    current = reader.getName().toString();
+
+                    printSkus(current, reader);
+                    break;
+
+                case XMLEvent.CHARACTERS:
+                    findAuthors(current, reader);
+                    break;
+                    }
+            } //end loop
+            out.println("Unique Authors=" + uniqueAuthors);
+
+            } catch (XMLStreamException e) {
+                out.println("Cannot parse: " + e);
+            }
+    }
+
+    //get the name and value of the book's sku attribute
+    private void printSkus(String current, XMLStreamReader r) {
+        current = r.getName().toString();
+
+        if ("book".equals(current)) {
+            String k = r.getAttributeName(0).toString();
+            String v = r.getAttributeValue(0);
+            out.println("AttribName " + k + "=" + v);
+        }
+    }
+
+    //inspect author elements and read their values.
+    private void findAuthors(String current, XMLStreamReader r)
+        throws XMLStreamException {
+
+        if ("author".equals(current)) {
+            String v = r.getText().trim();
+            
+            //can get whitespace value, so ignore
+            if (v.length() > 0) {
+                uniqueAuthors.add(v);
+            }
+        }       
+    }
+}
+    
+    
+====================================
+AttribName sku=123_xaa
+AttribName sku=988_yty
+AttribName sku=434_asd
+AttribName sku=876_pep
+Unique Authors=[George Orwell, Maurice Naftalin, Phillip Wadler, William Shakespeare]
+    
+    
+====================================
+Example: Reading XML with StAX Iterator
+
+
+    public class StaxIterator {
+        public void find() {
+        XMLInputFactory xif = XMLInputFactory.newInstance();
+        //forward-only, most efficient way to read
+        XMLEventReader reader = null;
+
+        //get ahold of the file
+        final InputStream is = 
+            StaxIterator.class.getResourceAsStream(db);
+
+        try {
+            //create the reader from the stream
+            reader = xif.createXMLEventReader(is);
+
+            //work with stream and get the type of event 
+            //we're inspecting
+            while (reader.hasNext()) {
+                XMLEvent e = reader.nextEvent();
+
+                if (e.isStartElement()){
+                    e = e.asStartElement().getAttributeByName(
+                    new QName("sku"));
+                    if (e != null){
+                        out.println(e);
+                    }
+                }
+            } //end loop
+
+        } catch (XMLStreamException e) {
+            out.println("Cannot parse: " + e);
+        }
+    }
+}
+    
+    
+====================================
+sku='123_xaa'
+sku='988_yty'
+sku='434_asd'
+sku='876_pep'
+    
+    
+====================================
+Example: Writing an XML File with XMLEventWriter
+
+package com.sc.ch02.stax;
+
+import static java.lang.System.out;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
+public class WriteStax {
+    private static final String REPAIR_NS = "javax.xml.stream.isRepairingNamespaces";
+    
+    private static final String NS = "http://ns.example.com/books";
+
+    public static void main(String... args) {
+        XMLOutputFactory factory = XMLOutputFactory.newInstance();
+        // autobox
+        factory.setProperty(REPAIR_NS, true);
+
+        try {
+            //setup a destination file
+            FileOutputStream fos = 
+            new FileOutputStream("result.xml");
+    
+            //create the writer
+            final XMLStreamWriter xsw = factory.createXMLStreamWriter(fos);
+            xsw.setDefaultNamespace(NS);
+  
+            //open the document. Can also add encoding, etc
+            xsw.writeStartDocument("1.0");
+            xsw.writeEndDocument();
+   
+            xsw.writeComment("Powered by StAX");
+  
+            //make enclosing book
+            xsw.writeStartElement("book");
+            xsw.writeNamespace("b", NS);
+            xsw.writeAttribute("sku", "345_iui");	    
+    
+            //make title child element
+            xsw.writeStartElement(NS, "title");
+            xsw.writeCharacters("White Noise");
+            xsw.writeEndElement(); //close title
+    
+            xsw.writeEndElement(); //close book
+    
+            //clean up
+            xsw.flush();
+            fos.close();
+            xsw.close();
+    
+            out.print("All done.");
+        } catch (FileNotFoundException fnfe) {
+            fnfe.printStackTrace();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        } catch (XMLStreamException xse) {
+            xse.printStackTrace();
+        }
+    }
+}
+    
+    
+====================================
+<?xml version="1.0"?>
+<!--Powered by StAX-->
+<book xmlns="http://ns.example.com/books" xmlns:b="http://ns.example.com/books" 
+    sku="345_iui">
+    <b:title>White Noise</b:title>
+</book>
+    
+    
+====================================
+<book xmlns="http://ns.example.com/books" xmlns:b="http://ns.example.com/books" 
+    sku="345_iui">
+    
+    
+====================================
+<?xml version="1.0"?>
+<!--Powered by StAX-->
+<book  xmlns:b="http://ns.example.com/books" sku="345_iui">
+//...
+    
+    
+====================================
+Example: StaxFiltered.java
+
+package com.sc.ch02.stax;
+
+import static java.lang.System.out;
+
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.xml.stream.*;
+import javax.xml.stream.events.XMLEvent;
+
+public class StaxFiltered {
+    private static final String fdb = "path/ch02/Catalog.xml";
+
+    private Map<String, Double> expensiveBooks;
+
+    private String lastTitle;
+    
+    //constructor
+    public StaxFiltered() {
+        expensiveBooks = new HashMap<String, Double>();
+    }
+
+    public static void main(String[] args) {
+        StaxFiltered p = new StaxFiltered();
+
+        p.findByEvent();
+    }
+
+    /*
+     * Here our aim is to find book prices over $10. So we use a
+     * filter to give us only start elements so we have already
+     * filtered out items we know don't help us.
+     */
+    public void findByEvent() {
+        try {
+            XMLInputFactory xif = XMLInputFactory.newInstance();
+
+            FileReader fr = new FileReader(fdb);
+
+            // wrap the XMLStreamReader with FilteredReader
+            XMLEventReader reader =
+                    xif.createFilteredReader(
+                            xif.createXMLEventReader(fr),
+                            new StartElementEventFilter());
+
+            // work with stream and get the type of event
+            // we're inspecting
+            while (reader.hasNext()) {
+
+                XMLEvent event = (XMLEvent) reader.next();
+                int eventType = event.getEventType();
+
+                switch (eventType) {
+                case XMLEvent.START_ELEMENT:
+
+                    findHighPrices(reader, event);
+                }
+
+            } // end loop
+
+            out.println("Expensive books=" + expensiveBooks);
+
+        } catch (FileNotFoundException fnfe) {
+            out.println("Cannot find source: " + fnfe);
+        } catch (XMLStreamException e) {
+            out.println("Cannot parse: " + e);
+        }
+    }
+
+    private void findHighPrices(XMLEventReader reader,
+            XMLEvent event) throws XMLStreamException {
+
+        String currentElem = event.asStartElement().toString();
+
+        // save off the title so we can match the price with it
+        if ("<title>".equals(currentElem)) {
+            lastTitle = reader.getElementText();
+        }
+
+        // get the current price and add to collection if high
+        if ("<price>".equals(currentElem)) {
+            double price;
+            try {
+                price = Double.parseDouble(reader
+                                .getElementText());
+
+                if (price > 10.0D) {
+                    expensiveBooks.put(lastTitle, price);
+                }
+
+            } catch (NumberFormatException nfe) {
+                nfe.printStackTrace();
+            } catch (XMLStreamException xse) {
+                xse.printStackTrace();
+            }
+        }
+    }
+}
+
+/**
+ * Get only start elements for efficiency. If we returned only
+ * attributes, for example, we wouldn't be able to read the data
+ * we're interested in here (title and price values).
+ */
+class StartElementEventFilter implements EventFilter {
+    // only req'd method to implement
+    public boolean accept(XMLEvent event) {
+        return event.isStartElement();
+    }
+}
+
+    
+    
+====================================
+Expensive books={Java Generics and Collections=34.99, 1984=12.95}
+    
+    
+====================================
+Example: BasicXPath.java
+
+
+package com.sc.ch02.xpath;
+
+import static java.lang.System.out;
+
+import java.io.IOException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.*;
+
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+
+/**
+ * Accepts an XPath expression to perform searching against
+ * the Catalog.xml document.
+ */
+public class BasicXPath {
+    
+    public static void main(String...args) throws Exception {
+        String xmlSource = "src/xml/ch02/Catalog.xml";
+               
+        //Get all titles with price between $5 and $9.99
+        xpath = "//book[price > 5.00 and price < 9.99]/title";
+        /* Prints:
+         * Value=King Lear
+           Value=Hamlet
+         */
+        
+        search(xmlSource, xpath);
+    }
+    
+    public static void search(String fileIn, String xpathExp) 
+        throws IOException {
+
+        // Set up the DOM parser
+        DocumentBuilderFactory docFactory =
+                DocumentBuilderFactory.newInstance();
+
+        try {
+            //Parse XML document
+            DocumentBuilder docBuilder =
+                    docFactory.newDocumentBuilder();
+            Document doc = docBuilder.parse(fileIn);
+
+            //Create XPath instance
+            XPath xpath = XPathFactory.newInstance().newXPath();
+            
+            //Evaluate XPath expression against parsed document
+            NodeList nodes = (NodeList) xpath.evaluate(xpathExp,
+                doc, XPathConstants.NODESET);
+
+            //We could return these instead to let caller deal
+            for (int i = 0, len = nodes.getLength(); i < len; i++) {
+                Node node = nodes.item(i);
+                
+                String value = node.getTextContent();
+                
+                out.println("Value=" + value);
+            }
+            
+        } catch (XPathExpressionException xpee) {
+            out.println(xpee);
+            throw new IOException("Cannot parse XPath.", xpee);
+        } catch (DOMException dome) {
+            out.println(dome);
+            throw new IOException("Cannot create DOM tree", dome);
+        } catch (ParserConfigurationException pce) {
+            out.println(pce);
+            throw new IOException("Cannot create parser.", pce);
+        } catch (SAXException saxe) {
+            out.println(saxe);
+            throw new IOException("Error parsing XML document.", saxe);
+        }
+    }
+}
+
+
+    
+    
+====================================
+"//book[price <" + uservalue + "]/title"
+    
+    
+====================================
+
+//Find the book titled 'Hamlet' and select its price.
+String xpath = "/catalog/book[title='Hamlet']/price";
+//Prints: Value=5.95
+        
+//Find titles of books with multiple authors
+xpath = "/catalog/book[authors]/title";
+//Prints: 
+Value=Java Generics and Collections
+        
+//Find all title AND price elements
+xpath = "//title | //price";
+//Prints:
+Value=King Lear
+Value=6.95
+Value=Hamlet
+Value=5.95
+Value=1984
+Value=12.95
+Value=Java Generics and Collections
+Value=34.99
+        
+//Get the author of the second book on the list
+xpath = "//book[2]/author";
+//Prints: 
+Value=William Shakespeare
+        
+//Get the SKU attrib value of the last book on the list
+xpath = "//book[last()]/@sku";
+//Prints: 
+Value=876_pep
+
+//Get the entire book node for Hamlet
+xpath = "//book[title='Hamlet']";
+//Prints the entire Hamlet node
+
+//Get the penultimate (one before the last) book that is a 'classic' 
+//whose price is between $5 and $10.
+xpath = "//book[category='classics' and (price > 5 and price < 10)][last()-1]";
+//Prints the entire King Lear node
+
+//Get the title node with the value of Hamlet
+xpath = "//title[.='Hamlet']";
+
+//Get the title of the first book whose author starts with 'William' 
+xpath = "//book[1][author[starts-with(., 'William')]]/title";
+//Prints: Value=King Lear
+
+//Gets the categories of the books after the 2nd one in the tree
+xpath = "//book[position() > 2]/category";
+
+//Gets any authors that are co-authors, 
+//that is, all <author> nodes under an <authors> node
+xpath = "//authors//author";
+//Prints: 
+Value=Maurice Naftalin
+Value=Phillip Wadler
+    
+    
+====================================
+Example: UpdateXMLValue.java
+
+package com.sc.ch02.xpath;
+
+import static java.lang.System.out;
+
+import java.io.FileWriter;
+import java.io.IOException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.xpath.*;
+
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+
+public class UpdateXMLValue {
+    
+    public static void main(String[] args) throws Exception {
+        String xmlSource = "src/xml/ch02/Catalog.xml";
+        
+        //find the book titled 'Hamlet' and select its price.
+        String xpath = "/catalog/book[title='Hamlet']/price";
+        
+        //this is the new price
+        String value = "8.95";
+        
+        //we're throwing any exception out
+        updateValueInXmlFile(xmlSource, xmlSource, xpath, value);
+        
+        out.println("All done.");
+    }
+    
+    public static void updateValueInXmlFile(String fileIn,
+            String fileOut, String xpathExpression,
+            String newValue) throws IOException {
+
+        // Set up the DOM evaluator
+        final DocumentBuilderFactory docFactory =
+                DocumentBuilderFactory.newInstance();
+
+        try {
+            final DocumentBuilder docBuilder =
+                    docFactory.newDocumentBuilder();
+            final Document doc = docBuilder.parse(fileIn);
+
+            final XPath xpath =
+                    XPathFactory.newInstance().newXPath();
+            NodeList nodes =
+                    (NodeList) xpath.evaluate(xpathExpression,
+                            doc, XPathConstants.NODESET);
+
+            // Update the nodes we found
+            for (int i = 0, len = nodes.getLength(); i < len; i++) {
+                Node node = nodes.item(i);
+                node.setTextContent(newValue);
+            }
+
+            // Get file ready to write
+            final Transformer transformer =
+                    TransformerFactory.newInstance()
+                            .newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT,
+                    "yes");
+            transformer.setOutputProperty(OutputKeys.ENCODING,
+                    "UTF-8");
+
+            StreamResult result =
+                    new StreamResult(new FileWriter(fileOut));
+            transformer.transform(new DOMSource(doc), result);
+
+            // Write file out
+            result.getWriter().flush();
+            result.getWriter().close();
+
+        } catch (XPathExpressionException xpee) {
+            out.println(xpee);
+            throw new IOException("Cannot parse XPath.", xpee);
+        } catch (DOMException dome) {
+            out.println(dome);
+            throw new IOException("Cannot create DOM tree", dome);
+        } catch (TransformerConfigurationException tce) {
+            out.println(tce);
+            throw new IOException("Cannot create transformer.",
+                    tce);
+        } catch (IllegalArgumentException iae) {
+            out.println(iae);
+            throw new IOException("Illegal Argument.", iae);
+        } catch (ParserConfigurationException pce) {
+            out.println(pce);
+            throw new IOException("Cannot create parser.", pce);
+        } catch (SAXException saxe) {
+            out.println(saxe);
+            throw new IOException("Error reading XML document.",
+                    saxe);
+        } catch (TransformerFactoryConfigurationError tfce) {
+            out.println(tfce);
+            throw new IOException("Cannot create trx factory.",
+                    tfce);
+        } catch (TransformerException te) {
+            out.println(te);
+            throw new IOException("Cannot write values.", te);
+        }
+    }
+}
+    
+    
+====================================
+Example: Book Class to Marshal into XML
+
+package com.soacookbook.ch02.jaxb;
+
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement
+public class Book {
+    
+    private String title;
+    private double price;
+    private Author author;
+    private Category category;
+//... getters and setters omitted.
+}
+
+class Author {
+    private String firstName;
+    private String lastName;
+
+//... getters and setters omitted.
+
+}
+
+enum Category {
+    LITERATURE,
+    PHILOSOPHY,
+    PROGRAMMING
+    ;
+}
+    
+    
+====================================
+Example: Using JAXB to Marshal a Book Object into XML and Print it to
+        the Console
+
+package com.soacookbook.ch02.jaxb;
+
+import static java.lang.System.out;
+
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+
+public class MarshalToConsole {
+       
+    public static void main(String...arg) {
+        try {
+
+            Book book = new Book();
+            Author a = new Author();
+            a.setFirstName("Jacques");
+            a.setLastName("Derrida");
+            book.setAuthor(a);
+            book.setPrice(34.95);
+            book.setTitle("Of Grammatology");
+            book.setCategory(Category.PHILOSOPHY);
+
+            Class[] c = {Book.class};
+            JAXBContext ctx = JAXBContext.newInstance(c);
+            Marshaller m = ctx.createMarshaller();
+            
+            //could also use System.out here
+            m.marshal(book, out);
+
+            out.println("\nAll done.");
+        } catch (JAXBException ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<book>
+    <author>
+        <firstName>Jacques</firstName>
+        <lastName>Derrida</lastName>
+    </author>
+    <category>PHILOSOPHY</category>
+    <price>34.95</price>
+    <title>Of Grammatology</title>
+</book>
+All done.
+    
+    
+====================================
+Example: Marshal to a DOM Node
+
+            
+//Create Document
+DocumentBuilderFactory dbf = 
+    DocumentBuilderFactory.newInstance();
+dbf.setNamespaceAware(true);
+DocumentBuilder db = dbf.newDocumentBuilder();
+Document doc = db.newDocument();
+
+//Send marshal result to Document
+m.marshal(book, doc);
+            
+//Find a value
+String title = doc.getDocumentElement().
+           getElementsByTagName("title").item(0).getTextContent();
+            
+System.console().printf("Read %s now!", title);
+
+/*
+Prints: Read Of Grammatology now!
+All done.
+*/
+    
+    
+====================================
+Example: Marshal to a New File
+
+m.marshal(book, new FileOutputStream(new File("aBook.xml")));
+    
+    
+====================================
+Example: Store Marshal Result in a String Using StringWriter
+
+StringWriter sw = new StringWriter();
+m.marshal(book, sw);
+            
+System.out.println(sw);
+    
+    
+====================================
+Example: Using JAXBElement to Unmarshal an XML String
+
+package com.soacookbook.ch02.jaxb;
+
+import java.io.StringReader;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.transform.stream.StreamSource;
+import org.w3c.dom.Document;
+
+public class UnmarshalWithElement {
+    
+  public static void main(String...arg) {
+    try {
+
+        //Create context
+        JAXBContext ctx = JAXBContext.newInstance(Book.class);
+        
+        //Create marshaller
+        Unmarshaller um = ctx.createUnmarshaller();
+
+        //Read in the XML from anywhere
+        //In this case it is a complete XML book as string.
+        StringReader sr = new StringReader(getBookXml());
+        
+        //Get XML from object
+        JAXBElement<Book> b = um.unmarshal(
+                new StreamSource(sr), Book.class);
+        
+        //Start working with object
+        Book book = b.getValue();
+        
+        System.console().printf("Title: %s", book.getTitle());
+
+    } catch (JAXBException ex) {
+        ex.printStackTrace();
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+  }
+  
+  private static String getBookXml(){
+      return "<com.soacookbook.ch02.xstream.Book>" +
+              "<title>On Friendship</title>" +
+              "<price>39.95</price>" + //etc...
+  }
+}
+    
+    
+====================================
+Title: On Friendship
+    
+    
+====================================
+>java -jar C:/programs/trang/trang.jar C:/repository/src/xml/ch02/Catalog.xml Catalog.xsd
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="catalog">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="book"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="book">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="title"/>
+        <xs:choice>
+          <xs:element ref="author"/>
+          <xs:element ref="authors"/>
+        </xs:choice>
+        <xs:element ref="price"/>
+        <xs:element ref="category"/>
+      </xs:sequence>
+      <xs:attribute name="sku" use="required" type="xs:NMTOKEN"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="title" type="xs:string"/>
+  <xs:element name="authors">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element maxOccurs="unbounded" ref="author"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="price" type="xs:decimal"/>
+  <xs:element name="category" type="xs:NCName"/>
+  <xs:element name="author" type="xs:string"/>
+</xs:schema>
+    
+    
+====================================
+-o disable-abstract-elements 
+    
+    
+====================================
+<a:address>
+  <a:street>1212 Some Street</a:street>
+  <a:city>Washington,DC</a:city>
+  <a:state>VA</a:state>
+</a:address>
+    
+    
+====================================
+<a:address xmlns:a="urn:ns:soacookbook:address">
+  <a:street>1212 Some Street</a:street>
+  <a:city>Washington,DC</a:city>
+  <a:state>VA</a:state>
+</a:address>
+    
+    
+====================================
+Example: From Java to XML and Back with XStream
+
+package com.soacookbook.ch02.xstream;
+
+import com.soacookbook.ch02.jaxb.*;
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.io.xml.DomDriver;
+import java.io.Serializable;
+import static java.lang.System.out;
+
+/**
+ * Shows Java to XML back to Java with no mapping
+ * using XStream.
+ */
+public class XMLStreamRoundTrip<T extends Serializable>  {
+    
+    public static void main(String...arg){
+     
+        //Create a complex object to work with
+        Book book = new Book();
+        Author a = new Author();
+        a.setFirstName("Jacques");
+        a.setLastName("Derrida");
+        book.setAuthor(a);
+        book.setPrice(39.95);
+        book.setTitle("Glas");
+        book.setCategory(Category.PHILOSOPHY);
+        
+        //Put the book into XML
+        XMLStreamRoundTrip<Book> x = new XMLStreamRoundTrip<Book>();
+        String bookXml = x.toXml(book);
+        
+        //Print entire XML
+        System.console().printf("XML:\n%s\n", bookXml);
+        
+        //Create a new object by rehydrating the XML
+        Book newBook = x.fromXml(bookXml);
+        
+        //Show values
+        System.console().printf("Object:\n%s costs $%s\n", 
+                newBook.getTitle(), newBook.getPrice());
+        
+    }
+
+    public String toXml(T model) {
+        return new XStream().toXML(model);
+    }
+
+    @SuppressWarnings("unchecked")
+    public T fromXml(String modelAsString) {
+        XStream xstream = new XStream(new DomDriver());
+        T model = (T)xstream.fromXML(modelAsString);
+        return model;
+    }
+}
+    
+    
+====================================
+XML:
+<com.soacookbook.ch02.xstream.Book>
+  <title>Glas</title>
+  <price>39.95</price>
+  <author>
+    <firstName>Jacques</firstName>
+    <lastName>Derrida</lastName>
+  </author>
+  <category>PHILOSOPHY</category>
+</com.soacookbook.ch02.xstream.Book>
+
+Object:
+Glas costs $39.95
+
+    
+    
+====================================
+> xjc -cp property-listener-injector.jar -Xinject-listener-code Book.xsd
+    
+    
+====================================
+<taskdef name="xjc" classname="com.sun.tools.xjc.XJCTask">
+  <classpath>
+    <pathelement path="/path/jaxb-xjc.jar"/>
+    <pathelement path="/path/plugin.jar" />
+  </classpath>
+</taskdef>
+
+...
+
+<xjc ...>
+  <arg value="-Xinject-listener-code" />
+</xjc>
+    
+    
+====================================
+Example: Finding a Java Class within a JAR
+
+> find . -name "*.jar" -print -exec jar -tvf {} \; > tmp 
+    
+    
+====================================
+./appserv-deployment-client.jar
+     0 Tue Apr 24 07:21:00 MST 2007 META-INF/
+   449 Tue Apr 24 07:20:58 MST 2007 META-INF/MANIFEST.MF
+     0 Tue Apr 24 06:45:36 MST 2007 com/
+     0 Tue Apr 24 06:45:34 MST 2007 com/sun/
+     0 Tue Apr 24 06:45:34 MST 2007 com/sun/enterprise/
+     0 Tue Apr 24 06:45:42 MST 2007 com/sun/enterprise/admin/
+     0 Tue Apr 24 06:45:42 MST 2007 com/sun/enterprise/admin/util/
+  1821 Tue Apr 24 06:45:28 MST 2007 com/sun/enterprise/admin/util/HostAndPort.class
+
+    
+    
+====================================
+> /InputsAndOutputs 
+    
+    
+====================================
+> ?.jar 
+    
+    
+====================================
+@WebServiceClient(name="CatalogServiceSN", 
+targetNamespace = "http://ns.soacookbook.com", 
+wsdlLocation = "http://localhost:8080/soaCookbookWS/CatalogServiceSN?wsdl")
+public class CatalogServiceSN extends Service { ... }
+    
+    
+====================================
+Example: XML Catalog Using System
+
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<catalog xmlns="urn:oasis:names:tc:entity:xmlns:xml:catalog" prefer="system">
+    <system systemId="http://localhost:8080/soaCookbookWS/CatalogServiceSN?wsdl" 
+        uri="src/xml/CatalogServiceSN.wsdl"/>
+    <system systemId="http://localhost:8080/soaCookbookWS/Library.xsd" 
+        uri="src/xml/Library.xsd"/>
+</catalog>
+    
+    
+====================================
+<public publicId="somePublicId" uri="someUri"/>
+    
+    
+====================================
+<uri name="http://www.oasis-open.org/committees/docbook/"
+          uri="file:///projects/oasis/docbook/website/"/>
+    
+    
+====================================
+<wsimport
+  wsdl="${wsdl.url}"
+  catalog="jax-ws-catalog.xml"
+  destdir="${gen.classes.dir}"
+  sourcedestdir="${src.gen.dir}"
+  keep="true"
+  extension="false"
+  verbose="true" >
+  <binding dir="${binding.dir}" includes="${binding.file}" />
+</wsimport>
+    
+    
+==================

@@ -1,0 +1,406 @@
+chapter: Getting Started
+==================
+<dependency>
+    <groupId>com.sun.xml.ws</groupId>
+    <artifactId>webservices-rt</artifactId>
+    <version>1.3</version>
+    <scope>compile</scope>
+</dependency>
+<dependency>
+  <groupId>javax.xml</groupId>
+  <artifactId>webservices-api</artifactId>
+  <version>1.3</version>
+  <scope>compile</scope>
+</dependency>
+    
+    
+====================================
+Example: Simple Service Interface, Hello.java
+
+package com.soacookbook.ch03;
+
+import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+
+@WebService
+@SOAPBinding(style=SOAPBinding.Style.RPC)
+public interface Hello {
+
+    String sayHello(String name);
+}
+    
+    
+====================================
+Example: Simple Web Service Implementation, HelloWS.java
+
+package com.soacookbook.ch03;
+
+import javax.jws.WebService;
+
+@WebService(endpointInterface="com.soacookbook.ch03.Hello")
+public class HelloWS implements Hello {
+
+    public String sayHello(String name) {
+        return "Hello, " + name + "!";
+    }
+}
+    
+    
+====================================
+Example: Publishing the Web Service Endpoint
+
+package com.soacookbook.ch03;
+
+import javax.xml.ws.Endpoint;
+
+public class HelloPublisher {
+    public static final String URI = "http://localhost:9999/hello";
+
+    public static void main(String[] args) {
+    
+        //Create instance of service implementation
+        HelloWS impl = new HelloWS();
+
+        //Make available
+        Endpoint endpoint = Endpoint.publish(URI, impl);
+
+        //Test that it is available
+        boolean status = endpoint.isPublished();
+        System.out.println("Web service status = " + status);
+    }
+}
+    
+    
+====================================
+@WebMethod
+public String sayHello(String name) {
+  return "Hello, " + name;
+}
+    
+    
+====================================
+<build>
+  <plugins>
+     <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.0.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+     </plugin>
+...
+    
+    
+====================================
+<dependency>
+  <groupId>javaee</groupId>
+  <artifactId>javaee-api</artifactId>
+  <version>5</version>
+  <scope>provided</scope>
+</dependency>
+    
+    
+====================================
+<!DOCTYPE web-app PUBLIC
+ "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+ "http://java.sun.com/dtd/web-app_2_3.dtd" >
+<web-app>
+  <display-name>My Service</display-name>
+</web-app>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" 
+  xmlns="http://java.sun.com/xml/ns/javaee" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+  http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+   
+   <display-name>My Service</display-name>
+</web-app>
+    
+    
+====================================
+<dependency>
+  <groupId>com.sun.xml.ws</groupId>
+  <artifactId>webservices-rt</artifactId>
+  <version>1.3</version>
+  <scope>provided</scope>
+</dependency>
+<dependency>
+  <groupId>javax.xml</groupId>
+  <artifactId>webservices-api</artifactId>
+  <version>1.3</version>
+  <scope>provided</scope>
+</dependency>
+    
+    
+====================================
+<plugin>
+  <groupId>org.n0pe.mojo</groupId>
+  <artifactId>asadmin-maven-plugin</artifactId>
+  <version>0.1</version>
+  <configuration>
+    <glassfishHome>${my.glassfish.home}</glassfishHome>
+  </configuration>
+  <executions>
+    <execution>
+      <phase>install</phase>
+      <goals>
+        <goal>redeploy</goal>
+      </goals>
+    </execution>
+   </executions>
+</plugin>
+    
+    
+====================================
+<plugin>
+ <groupId>org.codehaus.mojo</groupId>
+ <artifactId>jaxws-maven-plugin</artifactId>
+ <version>1.9</version>
+ <executions>
+   <execution>
+     <goals>
+       <goal>wsimport</goal>
+     </goals>
+   </execution>
+ </executions>
+ <configuration>
+   <packageName>com.myProject</packageName>
+     <wsdlUrls>
+       <wsdlUrl>${com.myProject.wsdl.url}</wsdlUrl>
+     </wsdlUrls>
+     <verbose>true</verbose>
+  </configuration>
+</plugin>
+    
+    
+====================================
+<modules>
+   <module>ws</module>
+   <module>client</module>
+</modules>
+    
+    
+====================================
+<profiles>
+<!-- For shared Continuous Integration Hudson Build. 
+     Developers should have their own profile set in profiles.xml, 
+     which should be ignored by source repository. -->
+  <profile>
+     <id>myProject-integration-profile</id>
+     <activation>
+     <!-- This property is passed to Maven from within 
+          the Hudson build configuration on the build server. -->
+     <property>
+        <name>integrationBuild</name>
+        <value>true</value>
+     </property>
+     </activation>
+     <properties>
+       <glassfish.home>/domains/devtools/glassfish/...</glassfish.home>
+       <my.wsdl.url>http://example.com:7575/my/MyService?wsdl</my.wsdl.url>
+     </properties>
+   </profile>
+</profiles>
+    
+    
+====================================
+Example: The Hello WSDL
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:tns="http://ch03.soacookbook.com/" 
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+    targetNamespace="http://ch03.soacookbook.com/" 
+    name="HelloWSService">
+  <types></types>
+  <message name="sayHello">
+    <part name="arg0" type="xsd:string"></part>
+  </message>
+  <message name="sayHelloResponse">
+    <part name="return" type="xsd:string"></part>
+  </message>
+  <portType name="Hello">
+    <operation name="sayHello" parameterOrder="arg0">
+      <input message="tns:sayHello"></input>
+      <output message="tns:sayHelloResponse"></output>
+    </operation>
+  </portType>
+  <binding name="HelloWSPortBinding" type="tns:Hello">
+    <soap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"></soap:binding>
+    <operation name="sayHello">
+      <soap:operation soapAction=""></soap:operation>
+      <input>
+        <soap:body use="literal" namespace="http://ch03.soacookbook.com/"></soap:body>
+      </input>
+      <output>
+        <soap:body use="literal" namespace="http://ch03.soacookbook.com/"></soap:body>
+      </output>
+    </operation>
+  </binding>
+  <service name="HelloWSService">
+    <port name="HelloWSPort" binding="tns:HelloWSPortBinding">
+      <soap:address location="http://localhost:9999/hello"></soap:address>
+    </port>
+  </service>
+</definitions>
+    
+    
+====================================
+<types>
+<xsd:schema>
+  <xsd:import namespace="http://soacookbook.com/" 
+    schemaLocation="http://localhost:7777/TestWS/HelloWSService?xsd=1"/>
+</xsd:schema>
+</types>
+    
+    
+====================================
+<types>
+<xsd:schema>
+  <xsd:simpleType name="ID">
+    <xsd:restriction base="xsd:string">
+      <xsd:pattern value="[0-9]{5}"/>
+    </xsd:restriction>
+  </xsd:simpleType>
+</xsd:schema>
+</types>
+    
+    
+====================================
+<target name="run">
+    <java classname="com.soacookbook.ch03.MyClient" fork="true">         
+        <arg value="someArg"/>
+        <classpath>
+          <path refid="jaxws.classpath"/>
+          <pathelement location="..."/>
+        </classpath>
+        <jvmarg value="-Dcom.sun.xml.ws.transport.http.client.HttpTransportPipe.dump=true"/>
+    </java>
+</target>
+    
+    
+====================================
+Example: JUnit Ant Task with SOAP Message Dumping Enabled
+
+<target name="run-test" depends="compile-test">
+<echo message="-----Running Tests-----" />
+<junit fork="true" printsummary="true" 
+       errorProperty="test.failed" 
+       failureProperty="test.failed">
+    <classpath refid="cp.test" />
+
+    <jvmarg 
+    value="-Dcom.sun.xml.ws.transport.http.client.HttpTransportPipe.dump=true"/>
+
+    <formatter type="brief" usefile="false"/>
+    <formatter type="xml"/>
+    <batchtest todir="${test.report.dir}">
+        <fileset dir="${test.classes.dir}" 
+          includes="**/*Test.class" />
+    </batchtest>
+</junit>
+
+<echo message="-----Creating JUnit Report-----" />
+<junitreport todir="${test.report.dir}">
+    <fileset dir="${test.report.dir}" includes="TEST-*.xml"/>
+    <report format="frames" todir="${test.report.dir}"/>
+</junitreport>
+
+<fail if="test.failed" 
+   message="Tests failed. Check log and/or reports."/>
+</target>   
+    
+    
+====================================
+Example: Output of HttpTransportPipe During JUnit Test
+
+4/27/08-14:40 DEBUG  com.soacookbook.ch03.test.SchemaValidateTest.testCreditAuth - 
+Invoking Credit Authorizer Service.
+---[HTTP request]---
+SOAPAction: ""
+Accept: text/xml, multipart/related, text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Content-Type: text/xml;charset="utf-8"
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body><creditCard xmlns="http://ns.soacookbook.com/credit">
+<cardNumber>4011111111111111</cardNumber>
+<name>
+<firstName>Phineas</firstName>
+<middleInitial>J</middleInitial>
+<lastName>Fogg</lastName>
+</name>
+<expirationDate>2015-04-27-07:00</expirationDate>
+</creditCard>
+</S:Body></S:Envelope>--------------------
+
+---[HTTP response 200]---
+Transfer-encoding: chunked
+null: HTTP/1.1 200 OK
+Content-type: text/xml;charset="utf-8"
+Server: Sun Java System Application Server 9.1_01
+X-powered-by: Servlet/2.5
+Date: Sun, 27 Apr 2008 21:40:44 GMT
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<authorization xmlns="http://ns.soacookbook.com/credit">
+<amount>2500.0</amount>
+</authorization>
+</S:Body></S:Envelope>--------------------
+
+    
+    
+====================================
+<plugin>
+  <groupId>org.apache.maven.plugins</groupId>
+  <artifactId>maven-surefire-plugin</artifactId>
+  <version>2.4.3</version>
+  <configuration>
+    <systemProperties>
+      <property>
+        <name>wsdlLocation</name>
+        <value>${my.wsdl.url}</value>
+      </property>
+      <property>
+        <name>com.sun.xml.ws.transport.http.client.HttpTransportPipe.dump</name>
+        <value>true</value>
+      </property>
+    </systemProperties>
+  </configuration>
+</plugin>
+    
+    
+====================================
+com.sun.xml.ws.util.pipe.StandaloneTubeAssembler.dump=true
+    
+    
+====================================
+$ java -jar tcpmon.jar
+    
+    
+====================================
+<soap:address location="http://localhost:8080/CalculatorApp/CalculatorWSService">
+    
+    
+====================================
+@WebServiceRef(wsdlLocation = "http://localhost:8080/CalculatorApp/CalculatorWSService?wsdl")
+    
+    
+====================================
+URL wsdlLocation = new URL("file:///C:/projects/etc/CalculatorWSService.wsdl");        
+QName serviceName = new QName("http://calculator.me.org/",            
+"CalculatorWSService");          
+CalculatorWSService service = 
+  new CalculatorWSService(wsdlLocation, serviceName);          
+CalculatorWS port = service.getCalculatorWSPort();      
+int result = port.add(2, 3);
+    
+    
+==================

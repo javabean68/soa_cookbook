@@ -1,0 +1,64 @@
+chapter: Enterprise Service Bus
+==================
+public interface CRM {
+    public Customer getCustomer(int id);
+}
+    
+    
+====================================
+<service name="CRM">
+  <port binding="sc:CrmPortBinding" name="CrmPort">
+    <s:address location="http://soacookbook.com:8080/CustomerService"/>
+  </port>
+</service>
+    
+    
+====================================
+Example: The Mule configuration file, mule-config.xml
+
+<mule xmlns="http://www.mulesource.org/schema/mule/core/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:stdio="http://www.mulesource.org/schema/mule/stdio/2.0"
+  xsi:schemaLocation="http://www.mulesource.org/schema/mule/core/2.0
+      http://www.mulesource.org/schema/mule/core/2.0/mule.xsd
+    http://www.mulesource.org/schema/mule/stdio/2.0
+      http://www.mulesource.org/schema/mule/stdio/2.0/mule-stdio.xsd">
+
+  <stdio:connector name="inConnector" promptMessage="Your Message: "/>
+
+  <model name="HelloWorld">
+    <service name="HelloComponent">
+
+      <inbound>                                               
+        <stdio:inbound-endpoint system="IN" connector-ref="inConnector"/>
+      </inbound>
+                                                                     
+      <component class="com.soacookbook.HelloComponent"/>
+
+    </service>
+  </model>
+</mule>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<jbi xmlns="http://java.sun.com/xml/ns/jbi" version="1.0"
+  xmlns:ns0="http://soacookbook/lookup" 
+  xmlns:esb="http://soacookbook/esb/customerScreen" 
+  xmlns:ws="http://soacookbook/ws/customerScreen">
+
+<services binding-component="false">
+  <provides endpoint-name="LookupEsbPortTypeRole_myRole" 
+    interface-name="esb:LookupPreApprovePortType" 
+    service-name="ns0:LookupEsb"/>
+
+  <consumes endpoint-name="LookupRole_partnerRole" 
+    interface-name="ws:Lookup" 
+    service-name="ns0:LookupPartner"/>
+</services>
+
+</jbi>
+    
+    
+==================

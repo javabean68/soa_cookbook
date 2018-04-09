@@ -1,0 +1,1727 @@
+chapter: Creating Web Service Clients with SAAJ
+==================
+POST /StockQuote HTTP/1.1
+Host: www.soacookbook.com:8080
+Content-Type: text/xml; charset="utf-8"
+Content-Length: n
+SOAPAction: ""
+<SOAP-ENV:Envelope
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+  SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+
+  <SOAP-ENV:Body>
+    <m:GetStockQuote xmlns:m="urn:com:soacookbook">
+      <ticker>JAVA</ticker>
+    </m:GetStockQuote>
+  </SOAP-ENV:Body>
+
+</SOAP-ENV:Envelope>
+
+    
+    
+====================================
+MessageFactory mf = MessageFactory.newInstance();
+SOAPMessage message = mf.getMessage();
+SOAPPart soapPart = message.getSOAPPart();
+SOAPEnvelope env = soapPart.getEnvelope();
+SOAPBody body = env.getBody();
+SOAPHeader header = env.getHeader();
+    
+    
+====================================
+QName bodyName = new QName("http://example.com", "getQuote", "e");
+    
+    
+====================================
+<e:getQuote xmlns:e="http://example.com">
+    
+    
+====================================
+QName portQName = new QName("http://www.webserviceX.NET/", "StockQuoteSoap");
+    
+    
+====================================
+<StockQuoteSoap xmlns="http://www.webserviceX.NET/">
+    
+    
+====================================
+<e:getQuote xmlns:e="urn:example:quotes:2:0">
+    
+    
+====================================
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header/>
+<SOAP-ENV:Body>
+<isbn xmlns="http://ns.soacookbook.com/catalog">12345</isbn>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+    
+    
+====================================
+Example: Building a Complete SOAP Message Manually
+
+public void buildSoapEnv() {
+try {
+    URL wsdl =
+            new URL("http://localhost:8080/CatalogService/Catalog?wsdl");
+
+    String ns = "http://ns.soacookbook.com/ws/catalog";
+
+    //Create the Service name
+    String svcName = "CatalogService";
+    QName svcQName = new QName(ns, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+
+    //Create the Port name
+    String portName = "CatalogPort";
+    QName portQName = new QName(ns, portName);
+
+    Dispatch<SOAPMessage> dispatch =
+            service.createDispatch(portQName,
+            SOAPMessage.class, Service.Mode.MESSAGE);
+    
+    //Create the message
+    SOAPMessage soapMsg =
+            MessageFactory.newInstance().createMessage();
+
+    //Get the body from the envelope
+    SOAPPart soapPart = soapMsg.getSOAPPart();
+    SOAPEnvelope env = soapPart.getEnvelope();
+    SOAPBody body = env.getBody();
+    
+    //Create a qualified name for the namespace of the
+    //objects used by the service. 
+    String iNs = "http://ns.soacookbook.com/catalog";
+    String elementName = "isbn";
+    QName isbnQName = new QName(iNs, elementName);
+    
+    //Add the <isbn> element to the SOAP body 
+    //as its only child
+    body.addBodyElement(isbnQName).setValue("12345");
+    
+    //debug print what we're sending
+    soapMsg.writeTo(out);
+
+    out.println("\nInvoking...");
+
+    //send the message as request to service and get response
+    SOAPMessage response = dispatch.invoke(soapMsg);
+
+    //just show in the console for now
+    response.writeTo(System.out);
+
+} catch (Exception ex) {
+    ex.printStackTrace();
+}
+}
+    
+    
+====================================
+Example: Writing the Contents of a SOAP Message to the Console
+
+package writesoapmessage;
+
+import java.io.IOException;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPPart;
+
+/**
+ * Creates a SOAP Message and writes it to the console.
+ */
+public class Main {
+    public static void main(String[] args) {
+        try {
+            SOAPMessage soapMsg = 
+                    MessageFactory.newInstance().createMessage();
+
+            //Get the body from the envelope
+            SOAPPart soapPart = soapMsg.getSOAPPart();
+            SOAPEnvelope env = soapPart.getEnvelope();
+            SOAPBody body = env.getBody();
+
+            //Create a qualified name for the namespace of the
+            //objects used by the service.
+            String iNs = "http://ns.soacookbook.com/catalog";
+            String elementName = "isbn";
+            QName isbnQName = new QName(iNs, elementName);
+
+            //Add the <isbn> element to the SOAP body
+            //as its only child
+            body.addBodyElement(isbnQName).setValue("12345");
+
+            //debug print what we're sending
+            soapMsg.writeTo(System.out);
+        } catch (SOAPException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+    
+    
+====================================
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Header/>
+  <SOAP-ENV:Body>
+    <isbn xmlns="http://ns.soacookbook.com/catalog">12345</isbn>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+    
+    
+====================================
+Example: Catalog EJB Web Service
+
+@WebService(serviceName="CatalogService", name="Catalog", 
+    targetNamespace="http://ns.soacookbook.com/ws/catalog")
+@Stateless
+@Local
+public class CatalogEJB {
+
+    @WebMethod
+    @SOAPBinding(style=SOAPBinding.Style.DOCUMENT,
+        use=SOAPBinding.Use.LITERAL, 
+        parameterStyle=SOAPBinding.ParameterStyle.BARE)
+    public @WebResult(name="book",
+            targetNamespace="http://ns.soacookbook.com/catalog") Book
+            getBook(
+            @WebParam(name="isbn", 
+            targetNamespace="http://ns.soacookbook.com/catalog") String isbn) {
+
+        LOG.info("Executing. ISBN=" + isbn);
+        Book book = new Book();
+    
+        //you would go to a database here.
+        if ("12345".equals(isbn)) {
+            LOG.info("Search by ISBN: " + isbn);
+            book.setTitle("King Lear");
+            Author shakespeare = new Author();
+            shakespeare.setFirstName("William");
+            shakespeare.setLastName("Shakespeare");
+            book.setAuthor(shakespeare);
+            book.setCategory(Category.LITERATURE);
+            book.setIsbn("12345");
+
+        } else {
+            LOG.info("Search by ISBN: " + isbn + ". NO RESULTS.");
+        }
+
+        LOG.info("Returning book: " + book.getTitle());
+        return book;
+    }
+    //...
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Body>
+<i:isbn xmlns:i="http://ns.soacookbook.com/catalog">12345</i:isbn>
+</soap:Body>
+</soap:Envelope>
+    
+    
+====================================
+Example: Manually Invoking a Web Service with Dispatch using
+        SOAPMessage in Message Mode
+
+import static java.lang.System.out;
+
+import java.io.FileInputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.ws.Dispatch;
+import javax.xml.ws.Service;
+import javax.xml.ws.WebServiceException;
+
+public class CatalogTest {
+
+public void dispatchMsgIsbnTest() {
+try {
+    URL wsdl =
+            new URL("http://localhost:8080/CatalogService/Catalog?wsdl");
+
+    String ns = "http://ns.soacookbook.com/ws/catalog";
+
+    //Create the Service qualified name
+    String svcName = "CatalogService";
+    QName svcQName = new QName(ns, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+
+    //Create the Port name
+    String portName = "CatalogPort";
+    QName portQName = new QName(ns, portName);
+
+    //Create the delegate to send the request:
+    Dispatch<SOAPMessage> dispatch =
+            service.createDispatch(portQName,
+            SOAPMessage.class, Service.Mode.MESSAGE);
+
+    String dataFile = "/path/src/xml/ch03/isbnMsg.txt";
+
+    //read in the data to use in building the soap message from a file
+    FileInputStream fis = new FileInputStream(dataFile);
+
+    //create the message, using contents of file as envelope
+    SOAPMessage request =
+            MessageFactory.newInstance().createMessage(null, fis);
+
+    //debug print what we're sending
+    request.writeTo(out);
+
+    out.println("\nInvoking...");
+
+    //send the message as request to service and get response
+    SOAPMessage response = dispatch.invoke(request);
+
+    //just show in the console for now
+    response.writeTo(System.out);
+
+} catch (MalformedURLException mue) {
+    mue.printStackTrace();
+} catch (WebServiceException wsex) {
+    wsex.printStackTrace();
+} catch (Exception ex) {
+    ex.printStackTrace();
+}
+}
+}
+    
+    
+====================================
+<?xml version='1.0' encoding='utf-8'?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Body>
+<i:isbn xmlns:i="http://ns.soacookbook.com/catalog">12345</i:isbn>
+</soap:Body>
+</soap:Envelope>
+
+Invoking...
+
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header/>
+<S:Body>
+<ns2:book xmlns:ns2="http://ns.soacookbook.com/catalog">
+<isbn>12345</isbn>
+<author>
+<firstName>William</firstName><lastName>Shakespeare</lastName>
+</author>
+<title>King Lear</title>
+<category>LITERATURE</category>
+</ns2:book>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+Example: Getting a DOM View of a SOAP Response
+
+public void extractDOMFromSOAPResult() {
+try {
+    URL wsdl =
+            new URL("http://localhost:8080/CatalogService/Catalog?wsdl");
+
+    String ns = "http://ns.soacookbook.com/ws/catalog";
+
+    //Create the Service name
+    String svcName = "CatalogService";
+    QName svcQName = new QName(ns, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+
+    //Create the Port name
+    String portName = "CatalogPort";
+    QName portQName = new QName(ns, portName);
+
+    Dispatch<SOAPMessage> dispatch =
+            service.createDispatch(portQName,
+            SOAPMessage.class, Service.Mode.MESSAGE);
+    
+    //create the message
+    SOAPMessage soapMsg =
+            MessageFactory.newInstance().createMessage();
+
+    SOAPPart soapPart = soapMsg.getSOAPPart();
+    SOAPEnvelope env = soapPart.getEnvelope();
+    SOAPBody body = env.getBody();
+    
+    //Create a qualified name for the namespace of the
+    //objects used by the service. 
+    String iNs = "http://ns.soacookbook.com/catalog";
+    String elementName = "isbn";
+    QName isbnQName = new QName(iNs, elementName);
+    
+    //Add the <isbn> element to the SOAP body 
+    //as its only child
+    body.addBodyElement(isbnQName).setValue("12345");
+       
+    //debug print what we're sending
+    soapMsg.writeTo(out);
+
+    out.println("\nInvoking...");
+
+    //send the message as request to service and get response
+    SOAPMessage response = dispatch.invoke(soapMsg);
+    
+    //Extract response content as DOM view
+    Document doc = 
+            response.getSOAPBody().extractContentAsDocument();
+    
+    NodeList isbnNodes = (NodeList)
+            doc.getElementsByTagName("lastName");
+    
+    //just get by index; we know there's only one
+    String value = isbnNodes.item(0).getTextContent();
+    out.println("\nAuthor LastName=" + value);
+
+    //just show in the console for now
+    //response.writeTo(System.out);
+
+} catch (Exception ex) {
+    ex.printStackTrace();
+}
+}
+    
+    
+====================================
+Author LastName=Shakespeare
+    
+    
+====================================
+Can not create Dispatch<SOAPMessage> of PAYLOAD. Must be MESSAGE.
+    
+    
+====================================
+Example: Web Service Client using Dispatch<Source> with an XML
+        String in Payload Mode
+
+public void dispatchPayloadIsbnTest() {
+try {
+    URL wsdl =
+            new URL("http://localhost:8080/CatalogService/Catalog?wsdl");
+
+    String ns = "http://ns.soacookbook.com/ws/catalog";
+    String objNs = "http://ns.soacookbook.com/catalog";
+
+    //Create the Service name
+    String svcName = "CatalogService";
+    QName svcQName = new QName(ns, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+
+    //Create the Port name
+    String portName = "CatalogPort";
+    QName portQName = new QName(ns, portName);
+
+    //Create the dispatcher on Source with Payload
+    Dispatch<Source> dispatch =
+            service.createDispatch(portQName,
+            Source.class, Service.Mode.PAYLOAD);
+
+    //Change to tick marks or escape double quotes
+    String payload = 
+         "<i:isbn xmlns:i='http://ns.soacookbook.com/catalog'>12345</i:isbn>";
+
+    //Create a SOAP request based on our XML string
+    StreamSource request = new StreamSource(new StringReader(payload));
+    
+    out.println("\nInvoking...");
+    
+    //Send the request and get the response
+    Source bookResponse = dispatch.invoke(request);
+    
+    //Now we have to transform our result source object 
+    //into a DOM tree to work with it
+    DOMResult dom = new DOMResult();
+    Transformer trans = TransformerFactory.newInstance().newTransformer();
+    trans.transform(bookResponse, dom);
+    
+    //Extract values with XPath
+    XPathFactory xpf = XPathFactory.newInstance();
+    XPath xp = xpf.newXPath();
+    NodeList resultNodes = (NodeList) xp.evaluate("//title",
+            dom.getNode(), XPathConstants.NODESET);
+    
+    //Show the result
+    String title = resultNodes.item(0).getTextContent();
+    out.println("TITLE=" + title);
+    
+} catch (MalformedURLException mue) {
+    mue.printStackTrace();
+} catch (WebServiceException wsex) {
+    wsex.printStackTrace();
+} catch (Exception ex) {
+    ex.printStackTrace();
+}
+}
+    
+    
+====================================
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header/>
+<S:Body>
+<ns2:book xmlns:ns2="http://ns.soacookbook.com/catalog">
+     <isbn>12345</isbn>
+     <author><firstName>William</firstName><lastName>Shakespeare</lastName>
+     </author>
+     <title>King Lear</title>
+     <category>LITERATURE</category>
+</ns2:book>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+Invoking...
+TITLE=King Lear
+    
+    
+====================================
+MessageFactory factory = MessageFactory.newInstance();
+SOAPMessage message = factory.createMessage();
+message.getMimeHeaders().addHeader("X-Powered-By", "Duff");
+    
+    
+====================================
+//Declare the namespace
+SOAPEnvelope env = msg.getSOAPPart().getEnvelope();
+env.addNamespaceDeclaration("e", "http://example.com/myNs");
+
+//Use the new namespace in the body
+SOAPBody body = msg.getSOAPPart().getEnvelope().getBody();
+QName bodyName = env.createQName("Quote", "e");
+SOAPBodyElement q = body.addBodyElement(bodyName); 
+    
+    
+====================================
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" 
+  xmlns:e="http://example.com/myNs">
+  <SOAP-ENV:Header/>
+  <SOAP-ENV:Body>
+    <e:Quote/>...
+    
+    
+====================================
+<wsdl:operation name="GetQuote">
+  <soap:operation style="document"
+    soapAction="http://www.webserviceX.NET/GetQuote" />
+...
+    
+    
+====================================
+SOAPAction: "http://www.webserviceX.NET/GetQuote"
+    
+    
+====================================
+POST /stockquote.asmx HTTP/1.1
+Host: www.webservicex.net
+Content-Type: text/xml; charset=utf-8
+Content-Length: length
+SOAPAction: "http://www.webserviceX.NET/GetQuote"
+    
+    
+====================================
+<GetQuoteResponse xmlns="http://www.webserviceX.NET/">
+    
+    
+====================================
+QName q = new QName("http://www.webserviceX.NET/","GetQuote");
+    
+    
+====================================
+Example: Adding a SOAPAction for a .NET Web Service
+
+package addSoapAction;
+
+import java.net.MalformedURLException;
+import java.net.URL;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPBodyElement;
+import javax.xml.soap.SOAPElement;
+import javax.xml.soap.SOAPException;
+import javax.xml.ws.Dispatch;
+import javax.xml.ws.Service;
+
+/**
+ * Shows how to add a MIME header, of which SOAPAction is one.
+ */
+public class AddSoapAction {
+    private static final String WSDL = 
+       "http://www.webservicex.net/stockquote.asmx?wsdl";
+    
+    private static final String NS = 
+        "http://www.webserviceX.NET/";
+    
+    public static void main(String...arg) {
+        new AddSoapAction().invoke();
+        
+        System.out.println("\nAll done.");
+    }
+
+    public AddSoapAction() {  }
+    
+    private void invoke(){
+        try {
+            //Prepare service to call
+            Service service = createService();
+            QName portQName = new QName(NS, "StockQuoteSoap");
+            Dispatch<SOAPMessage> dispatch =
+                service.createDispatch(portQName,
+                SOAPMessage.class, Service.Mode.MESSAGE);
+            
+            //Add SOAPAction
+            dispatch.getRequestContext().put(
+                    Dispatch.SOAPACTION_USE_PROPERTY, "1");
+            dispatch.getRequestContext().put(
+                    Dispatch.SOAPACTION_URI_PROPERTY, 
+                    "http://www.webserviceX.NET/GetQuote");
+            
+            //Prepare Request
+            SOAPMessage request = createMessage();
+            
+            //send request and get response
+            SOAPMessage response = dispatch.invoke(request);
+            
+            //Write response to console
+            System.out.println("\nGot Response:\n");
+            response.writeTo(System.out);
+            System.out.println("\n");
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+private SOAPMessage createMessage() throws SOAPException {
+        //Create a SOAPMessage
+        MessageFactory messageFactory = 
+                MessageFactory.newInstance();
+        SOAPMessage message = messageFactory.createMessage();
+        
+        try {
+        SOAPEnvelope env = message.getSOAPPart().getEnvelope();        
+        SOAPBody body = env.getBody();
+
+        //Create a SOAPBodyElement
+        QName bodyName = new QName("http://www.webserviceX.NET/",
+                "GetQuote");
+
+        SOAPBodyElement bodyEl = body.addBodyElement(bodyName);
+
+        //Add our data
+        QName name = new QName("symbol");
+        SOAPElement symbol = bodyEl.addChildElement(name);
+        symbol.addTextNode("JAVA");
+
+        System.out.println("\nCreated Request:\n");
+        message.writeTo(System.out);
+        System.out.println("\n");
+
+    } catch (Exception e) {
+        System.out.println(e.getMessage());
+    }
+    
+    return message;
+    }
+
+    private Service createService() throws MalformedURLException {
+        URL wsdl = new URL(WSDL);
+
+    //Create the Service name
+    String svcName = "StockQuote";
+    QName svcQName = new QName(NS, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+    System.out.println("Created Service: " + service.getServiceName());
+    
+    return service;
+    }
+}
+
+    
+    
+====================================
+//Say we want to use SOAPAction
+dispatch.getRequestContext().put(
+  Dispatch.SOAPACTION_USE_PROPERTY, "1");
+
+//Specify our value
+dispatch.getRequestContext().put(
+  Dispatch.SOAPACTION_URI_PROPERTY, 
+    "http://www.webserviceX.NET/GetQuote");
+    
+    
+====================================
+SOAPAction: "http://www.webserviceX.NET/GetQuote"
+    
+    
+====================================
+Created Service: {http://www.webserviceX.NET/}StockQuote
+
+Created Request:
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="...">
+<SOAP-ENV:Header/>
+<SOAP-ENV:Body>
+<GetQuote xmlns="http://www.webserviceX.NET/">
+<symbol>JAVA</symbol>
+</GetQuote>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+Got Response:
+
+<soap:Envelope 
+  xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<soap:Header/>
+<soap:Body>
+  <GetQuoteResponse xmlns="http://www.webserviceX.NET/">
+  <GetQuoteResult>
+  <StockQuotes>
+  <Stock>
+  <Symbol>JAVA</Symbol>
+  <Last>10.10</Last>
+  <Date>7/24/2008</Date>
+  <Time>4:00pm</Time>
+  <Change>-0.42</Change>
+  <Open>10.47</Open><High>10.48</High>
+  <Low>10.06</Low><Volume>18796276</Volume>
+  <MktCap>7.896B</MktCap>
+  <PreviousClose>10.52</PreviousClose>
+  <PercentageChange>-3.99%</PercentageChange>
+  <Name>SUN MICROSYSTEMS </Name>
+  </Stock>
+  </StockQuotes>
+  </GetQuoteResult>
+  </GetQuoteResponse>
+</soap:Body>
+</soap:Envelope>
+    
+    
+====================================
+Example: Adding an Attribute to an Element
+
+package addAttribute;
+
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPBodyElement;
+import javax.xml.soap.SOAPElement;
+
+public class SAAJCreateAttribute {
+    public static void main(String args[]) {
+    try {
+        //Create a SOAPMessage
+        MessageFactory messageFactory = 
+                MessageFactory.newInstance();
+        SOAPMessage message = messageFactory.createMessage();
+        SOAPEnvelope env = message.getSOAPPart().getEnvelope();
+        SOAPBody body = env.getBody();
+
+        //Create a SOAPBodyElement
+        QName bodyName = new QName("http://example.com",
+                "getQuote", "e");
+
+        SOAPBodyElement bodyEl = body.addBodyElement(bodyName);
+
+        //Add our data
+        QName name = new QName("ticker");
+        SOAPElement ticker = bodyEl.addChildElement(name);
+        ticker.addTextNode("JAVA");
+
+        //to ticker element, add our countryCode attribute 
+        //with a value of US
+        QName attributeName = new QName("countryCode");
+        ticker.addAttribute(attributeName, "US");
+
+        message.writeTo(System.out);
+
+    } catch (Exception e) {
+        System.out.println(e.getMessage());
+    }
+    }
+}
+
+    
+    
+====================================
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Header/>
+  <SOAP-ENV:Body>
+    <e:getQuote xmlns:e="http://example.com">
+        <ticker countryCode="US">JAVA</ticker>
+    </e:getQuote>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+    
+    
+====================================
+SOAPHeader header = env.getHeader();
+header.detachNode();
+    
+    
+====================================
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="...">
+<SOAP-ENV:Body>...
+    
+    
+====================================
+Example: A Web Service Operation that Defines Headers
+
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebService;
+
+@WebService(targetNamespace="urn:soacookbook.saaj")
+public class CalculatorWS {
+
+    @WebMethod(operationName="add", action="add")
+    public int add(@WebParam(name = "i") int i, 
+            @WebParam(name="j") int j, 
+            @WebParam(header=true, name="passwordHeader", 
+            mode=WebParam.Mode.IN) String passwordHeader) {
+        
+        System.out.print("Header value was: " + passwordHeader);
+        System.out.print("i=" + i + ". j=" + j);
+        
+        return i + j;
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns:wsu="http://docs.oasis-open.org/wss/
+  2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+  xmlns:tns="urn:soacookbook.saaj" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns="http://schemas.xmlsoap.org/wsdl/" 
+  targetNamespace="urn:soacookbook.saaj" 
+  name="CalculatorWSService">
+
+<types>
+  <xsd:schema>
+  <xsd:import namespace="urn:soacookbook.saaj" 
+  schemaLocation="http://localhost:8080/SecureCalculatorApp/
+    CalculatorWSService?xsd=1">
+  </xsd:import>
+</xsd:schema>
+</types>
+
+<message name="add">
+  <part name="parameters" element="tns:add"></part>
+  <part name="passwordHeader" element="tns:passwordHeader"></part>
+</message>
+<message name="addResponse">
+  <part name="result" element="tns:addResponse"></part>
+</message>
+
+<portType name="CalculatorWS">
+  <operation name="add" parameterOrder="parameters passwordHeader">
+    <input message="tns:add"></input>
+    <output message="tns:addResponse"></output>
+  </operation>
+</portType>
+
+<binding name="CalculatorWSPortBinding" type="tns:CalculatorWS">
+  <soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+    style="document"></soap:binding>
+  <operation name="add">
+  <soap:operation soapAction="add"></soap:operation>
+  <input>
+  <soap:body use="literal" parts="parameters"></soap:body>
+  <soap:header message="tns:add" part="passwordHeader" 
+    use="literal"></soap:header>
+  </input>
+  <output>
+  <soap:body use="literal"></soap:body>
+  </output>
+  </operation>
+</binding>
+
+<service name="CalculatorWSService">
+  <port name="CalculatorWSPort" binding="tns:CalculatorWSPortBinding">
+  <soap:address location="http://localhost:8080/SecureCalculatorApp/
+    CalculatorWSService"></soap:address>
+  </port>
+</service>
+
+</definitions>
+    
+    
+====================================
+<xs:schema xmlns:tns="urn:soacookbook.saaj" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.0" 
+  targetNamespace="urn:soacookbook.saaj">
+
+<xs:element name="add" type="tns:add"></xs:element>
+
+<xs:element name="passwordHeader" nillable="true" 
+  type="xs:string"></xs:element>
+
+<xs:element name="addResponse" 
+  type="tns:addResponse"></xs:element>
+
+<xs:complexType name="add">
+<xs:sequence>
+<xs:element name="i" type="xs:int"></xs:element>
+<xs:element name="j" type="xs:int"></xs:element>
+</xs:sequence>
+</xs:complexType>
+//... response omitted
+</xs:schema>
+    
+    
+====================================
+<tns:add xmlns:tns="urn:soacookbook.saaj">
+  <i>5</i><j>4</j>
+</tns:add>
+    
+    
+====================================
+<SOAP-ENV:Header>
+  <passwordHeader xmlns="urn:soacookbook.saaj">
+    s3cr3t
+  </passwordHeader>
+</SOAP-ENV:Header>
+    
+    
+====================================
+Example: SAAJ Client that Passes Headers
+
+package createHeader;
+
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPBodyElement;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPHeader;
+import javax.xml.soap.SOAPHeaderElement;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.ws.Dispatch;
+import javax.xml.ws.Service;
+
+/**
+ * Invokes the SAAJ header service.
+ */
+public class SAAJCreateHeader {
+    
+    private static final String NS = "urn:soacookbook.saaj";
+    
+    public static void main(String...arg) {
+        new SAAJCreateHeader().invoke();
+        System.out.println("\nAll done.");
+    }
+
+    public SAAJCreateHeader() {  }
+    
+    private void invoke(){
+        try {
+            //Prepare service to call
+            Service service = createService();
+            QName portQName = new QName(NS, "CalculatorWSPort");
+            Dispatch<SOAPMessage> dispatch =
+                service.createDispatch(portQName,
+                SOAPMessage.class, Service.Mode.MESSAGE);
+            
+            //Prepare Request
+            SOAPMessage request = createMessage();
+            
+            //Send request and get response
+            SOAPMessage response = dispatch.invoke(request);
+            
+            //Write response to console
+            response.writeTo(System.out);
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    private SOAPMessage createMessage() throws SOAPException { 
+       SOAPMessage msg = MessageFactory.newInstance().createMessage();
+       
+       try {
+           
+            SOAPEnvelope env = msg.getSOAPPart().getEnvelope();
+            SOAPHeader header = env.getHeader();
+            
+            //Create header
+            QName passwordQName =
+                    new QName(NS, "passwordHeader");
+            SOAPHeaderElement headerElement = 
+                    header.addHeaderElement(passwordQName);
+            headerElement.addTextNode("s3cr3t");
+            
+            //Create body
+            SOAPBody body = msg.getSOAPPart().getEnvelope().getBody();
+            QName addQName = 
+                   new QName("urn:soacookbook.saaj", "add", "tns");
+            
+            SOAPBodyElement bodyEl = body.addBodyElement(addQName);
+            
+            bodyEl.addChildElement("i").addTextNode("5");
+            bodyEl.addChildElement("j").setValue("4");     
+            
+            System.out.println("\nCreated Message:\n");
+            msg.writeTo(System.out);
+            System.out.println("\n");
+            
+        } catch (SOAPException ex) {
+            ex.printStackTrace();
+        }catch (IOException ex) {
+            ex.printStackTrace();
+        }
+       return msg;
+    }
+    
+    private Service createService() throws MalformedURLException {
+        URL wsdl =
+            new URL("http://localhost:8080/SecureCalculatorApp/" +
+            "CalculatorWSService?WSDL");
+
+    //Create the Service name
+    String svcName = "CalculatorWSService";
+    QName svcQName = new QName(NS, svcName);
+
+    //Get a delegate wrapper
+    Service service = Service.create(wsdl, svcQName);
+    System.out.println("Created Service: " + service.getServiceName());
+    
+    return service;
+    }
+    
+}
+
+    
+    
+====================================
+Created Service: {urn:soacookbook.saaj}CalculatorWSService
+Created Message:
+
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+  <SOAP-ENV:Header>
+    <passwordHeader xmlns="urn:soacookbook.saaj">s3cr3t</passwordHeader>
+  </SOAP-ENV:Header>
+  <SOAP-ENV:Body>
+    <tns:add xmlns:tns="urn:soacookbook.saaj">
+      <i>5</i>
+      <j>4</j>
+    </tns:add>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+  <S:Header/>
+  <S:Body>
+  <ns2:addResponse xmlns:ns2="urn:soacookbook.saaj">
+    <return>9</return>
+  </ns2:addResponse>
+</S:Body>
+</S:Envelope>
+
+All done.
+    
+    
+====================================
+Header value was: s3cr3t
+i=5. j=4
+    
+    
+====================================
+Example: Shows All Headers in a Message
+
+package allHeaders;
+
+import java.io.IOException;
+import java.util.Iterator;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPBodyElement;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPHeader;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPHeaderElement;
+import javax.xml.soap.SOAPMessage;
+
+/**
+ * Loops over headers in a message.
+ */
+public class AllHeaders {
+    private static final String NS = "urn:soacookbook.saaj";
+
+    public static void main(String args...) {
+        try {
+            AllHeaders me = new AllHeaders();
+            me.showHeaders(me.createMessage());
+        } catch (SOAPException ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    @SuppressWarnings("unchecked")
+    private static void showHeaders(SOAPMessage message)
+            throws SOAPException {
+        SOAPHeader header = message.getSOAPHeader();
+        
+        Iterator<SOAPHeaderElement> allHeaders = 
+             header.examineAllHeaderElements();
+        
+        while (allHeaders.hasNext()) {
+            SOAPHeaderElement headerElement =
+                    allHeaders.next();
+            QName headerName = headerElement.getElementQName();
+            System.out.println("\nHeader name=" +
+                    headerName.getLocalPart());
+            System.out.println("Actor=" +
+                    headerElement.getActor());
+        }
+    }
+
+    private SOAPMessage createMessage() throws SOAPException {
+        SOAPMessage msg = MessageFactory.newInstance().createMessage();
+        try {
+            SOAPEnvelope env = msg.getSOAPPart().getEnvelope();
+            SOAPHeader header = env.getHeader();
+
+            //Create header
+            QName passwordQName =
+                    new QName(NS, "passwordHeader");
+            SOAPHeaderElement headerElement =
+                    header.addHeaderElement(passwordQName);
+            headerElement.addTextNode("s3cr3t");
+
+            //Create body
+            SOAPBody body = msg.getSOAPPart().getEnvelope().getBody();
+            QName addQName = new QName("urn:soacookbook.saaj", "add", "tns");
+
+            SOAPBodyElement bodyEl = body.addBodyElement(addQName);
+
+            bodyEl.addChildElement("i").addTextNode("5");
+            bodyEl.addChildElement("j").setValue("4");
+
+            System.out.println("\nCreated Message:\n");
+            msg.writeTo(System.out);
+            System.out.println("\n");
+
+        } catch (SOAPException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return msg;
+    }
+}
+
+    
+    
+====================================
+Header name=passwordHeader
+Actor is null
+    
+    
+====================================
+AttachmentPart attachment = message.createAttachmentPart();
+String data = "Some attachment data";
+attachment.setContent(data, "text/plain");
+attachment.setContentID("my-data");
+message.addAttachmentPart(attachment); 
+    
+    
+====================================
+URL url = new URL("http://java.sun.com/im/logo_sun_small_sdn.gif");
+DataHandler dataHandler = new DataHandler(url);
+AttachmentPart att = msg.createAttachmentPart(dataHandler);
+msg.addAttachmentPart(att);
+    
+    
+====================================
+@SuppressWarnings("unchecked")
+private void printReceivedAttachmentData(SOAPMessage msg) 
+            throws SOAPException {
+        
+  System.out.print("Getting attachment...");
+        
+  Iterator<AttachmentPart> it = msg.getAttachments();       
+  while (it.hasNext()) {
+    AttachmentPart attachment = it.next();
+   
+    String id = attachment.getContentId();
+          
+    //Check the ID, just to pretend some business logic
+    if ("clientVersion".equals(id)){
+      String type = attachment.getContentType();
+      System.out.print("Attachment ID=" + id +
+                      ". Content Type=" + type);
+
+      if ("text/plain".equals(type)) {
+        Object content = attachment.getContent();
+        System.out.println("Attachment data: " + content);
+      }
+    }
+  }
+} 
+    
+    
+====================================
+Getting attachment...
+Attachment ID=clientVersion. Content Type=text/plain
+Attachment data: Client-Version=1.1
+    
+    
+====================================
+//Prepare Request
+SOAPMessage request = 
+     MessageFactory.newInstance().createMessage();
+
+//add data to request SOAP Message here...
+
+//Create connection object
+SOAPConnectionFactory scf = SOAPConnectionFactory.newInstance();
+SOAPConnection connection = scf.createConnection();
+
+//Create an endpoint to invoke
+URL endpoint = new URL("http://localhost:8080/" +
+                    "SAAJProvider/SAAJProviderServlet");
+            
+// Send request to endpoint, get response
+SOAPMessage response = connection.call(request, endpoint);
+    
+    
+====================================
+//Create header 
+QName passwordQName = new QName(NS, "passwordHeader");
+SOAPHeaderElement passwordHeader =
+                    header.addHeaderElement(passwordQName);
+passwordHeader.addTextNode("s3cr3t");
+passwordHeader.setActor("http://example.com/authenticator");
+
+//Set the Actor on it
+passwordHeader.setActor("http://example.com/authenticator");
+    
+    
+====================================
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header>
+  <passwordHeader xmlns="http://soacookbook.com/saaj" 
+    SOAP-ENV:actor="http://example.com/authenticator">
+      s3cr3t
+  </passwordHeader>
+</SOAP-ENV:Header><SOAP-ENV:Body
+    
+    
+====================================
+Response<T> invokeAsync(T msg) 
+Future<?> invokeAsync(T msg, AsyncHandler<T> handler) 
+
+    
+    
+====================================
+Dispatch<SOAPMessage> dispatch = 
+    service.createDispatch(portQName, SOAPMessage.class, 
+                           Service.Mode.MESSAGE);
+
+//Send the request and get the response
+Response<Source> bookResponse = dispatch.invokeAsync(request);
+    
+    
+====================================
+package com.soacookbook.ch03.test;
+
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import static org.junit.Assert.*;
+
+import com.soacookbook.ns.credit.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import javax.xml.XMLConstants;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.ws.Dispatch;
+import javax.xml.ws.Service;
+import javax.xml.ws.soap.SOAPBinding;
+import org.apache.log4j.Logger;
+import org.junit.*;
+import org.w3c.dom.Document;
+import org.xml.sax.SAXException;
+
+/**
+ * Tests that JAXB-generated objects validate against a schema
+ * at runtime.
+ */
+public class SchemaValidateTest {    
+    private static final Logger LOGGER = 
+            Logger.getLogger(SchemaValidateTest.class);
+
+    private static final String schemaFile = 
+            "C:/oreilly/soacookbook/code/" +
+            "chapters/client/config/ch03/Credit.xsd";
+
+//Tests that our schema constraints are not violated.
+@Test
+public void testCreditValidating() throws Exception {
+    LOGGER.debug("Executing.");
+
+    //JAXB-generated types from schema
+    CreditCard card = new CreditCard();
+    Name cardholder = new Name();
+    cardholder.setFirstName("Eliza");
+    cardholder.setLastName("Doolittle");
+    card.setName(cardholder);
+    //4222222222222222
+    card.setCardNumber("4");
+
+    //see setup method which creates this
+    card.setExpirationDate(expiryDate);
+
+    LOGGER.debug("Invoking Credit Authorizer Service.");
+    //invoke service using SAAJ here:
+    Authorization auth = validateAndInvoke(card);
+
+    assertTrue(2500.0D == auth.getAmount());
+}
+
+//This is called by the test
+private Authorization validateAndInvoke(CreditCard card){
+    
+    Authorization auth = new Authorization();
+    
+    try {
+    //Create DOM from CreditCard obj and validate against schema
+    Document domCC = marshalCC(card);
+    
+    LOGGER.debug("Got card. " + domCC);
+    
+    //Create SOAP Message from DOM
+    SOAPMessage soapCC = createSoapMessage(domCC);
+   
+        //Dispatch SOAP Message: invoke svc
+        SOAPMessage soapAuth = invoke(soapCC);
+        
+        //unmarshall back into Authorization object       
+        auth = unmarshal(soapAuth);
+    
+    } catch (JAXBException iae){
+        LOGGER.warn("JAXB: Invalid data! ", iae);
+    } catch (SAXException se){
+        LOGGER.warn("SAX: Invalid data! " + se);
+    }
+        
+    return auth;
+}
+
+/**
+ * Creates a SOAP Envelope with a SOAP Body containing this 
+ * document as its child. */
+public SOAPMessage createSoapMessage(Document document) {
+    LOGGER.debug("Executing.");
+
+    SOAPMessage message = null;
+    try {
+        message = MessageFactory.newInstance().createMessage();
+        final SOAPEnvelope env = message.getSOAPPart().getEnvelope();
+        final SOAPBody body = env.getBody();
+
+        body.addDocument(document);
+        message.saveChanges();
+
+        LOGGER.debug("Created SOAP Message.");
+
+    } catch(SOAPException se){
+        LOGGER.error("Could not create SOAP message. ", se);
+    }
+
+    return message;
+}
+
+/**
+ * Uses the previously created request message to call the 
+ * web service and return a response.
+ */
+public SOAPMessage invoke(SOAPMessage request) {
+    LOGGER.debug("Executing.");
+
+    String ns = "http://ns.soacookbook.com/credit";
+    
+    QName svcQName = new QName(ns, "CreditService");
+    QName portQName = new QName(ns, "CreditAuthorizer");
+    String wsdlUrl = "http://localhost:8080/soaCookbookWS/CreditService?wsdl";
+
+    final Service service = Service.create(svcQName);
+    service.addPort(portQName, 
+            SOAPBinding.SOAP11HTTP_BINDING, wsdlUrl);
+    LOGGER.debug("Invoking Service: " + service.getServiceName() + 
+            ". Port: " + portQName + ". WSDL Location: " + wsdlUrl);
+
+    final Dispatch<SOAPMessage> dispatch = 
+            service.createDispatch(portQName, 
+              SOAPMessage.class, Service.Mode.MESSAGE);
+
+    //Call the Service with our message        
+    return dispatch.invoke(request);
+}
+
+@SuppressWarnings(value = "unchecked")
+public static Authorization unmarshal(SOAPMessage soapMsg){
+    LOGGER.debug("Executing.");
+    
+    String pkg = "com.soacookbook.ns.credit";
+    Authorization auth = null;
+    try {
+        JAXBContext ctx = JAXBContext.newInstance(pkg);
+        Unmarshaller unmarshaller = ctx.createUnmarshaller();
+        
+        //Show returned SOAP Message
+        soapMsg.writeTo(System.out);
+    
+        //Get the payload of the response
+        Document doc = 
+                soapMsg.getSOAPBody().extractContentAsDocument();
+        
+        //turn DOM docunment paydload into JAXBElement
+        JAXBElement<Authorization> el = 
+                (JAXBElement<Authorization>) unmarshaller.unmarshal(doc);
+        
+        //extract the payload as object
+        auth = el.getValue();
+        
+        LOGGER.debug("DOM AUTH: " + auth);
+
+    } catch (IOException ioe) {
+        ioe.printStackTrace();
+    } catch (SOAPException se) {
+        se.printStackTrace();
+    } catch (JAXBException je) {
+        je.printStackTrace();
+    }
+    return auth;
+}
+
+private static Document marshalCC(final CreditCard card) 
+        throws JAXBException, SAXException {
+
+    Document doc = null;
+    try {
+        Class[] clazz = {CreditCard.class};
+        JAXBContext ctx = JAXBContext.newInstance(clazz);
+
+        String ns = "http://ns.soacookbook.com/credit";
+        QName qName = new QName(ns, "creditCard", "");
+        JAXBElement<CreditCard> root = 
+           new JAXBElement<CreditCard>(
+                qName, CreditCard.class, card);
+
+        Marshaller m = ctx.createMarshaller();
+        
+        SchemaFactory sf = SchemaFactory.newInstance(
+            XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        
+        Schema schema = sf.newSchema(
+            new StreamSource(new File(schemaFile)));
+        m.setSchema(schema);
+
+        DocumentBuilderFactory dbf = 
+                DocumentBuilderFactory.newInstance();
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        doc = db.newDocument();
+
+        m.marshal(root, doc);
+
+        LOGGER.debug("DOM object has elements: " + 
+                doc.getChildNodes().getLength());
+        
+    } catch (ParserConfigurationException pce) {
+        pce.printStackTrace();
+    }
+
+    return doc;
+}
+
+    
+    
+====================================
+org.xml.sax.SAXParseException: cvc-pattern-valid: 
+Value '4' is not facet-valid with respect to pattern '\d{16}' for type 'CardNumber'.
+    
+    
+====================================
+Example: Servlet SOAP Provider
+
+package saaj.provider;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Enumeration;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.MimeHeaders;
+import javax.xml.soap.Name;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPBodyElement;
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPPart;
+
+/**
+ * SAAJ servlet to act as web service provider.
+ */
+public class SAAJProviderServlet extends HttpServlet {
+
+    static MessageFactory mf;
+    static {
+        try {
+            mf = MessageFactory.newInstance();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, 
+            HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        System.out.println("\nGot Http Request: " + 
+                request.getMethod());
+                
+        try {
+
+            SOAPMessage reply = createReply(request);
+            
+            if (reply != null) {
+                response.setStatus(HttpServletResponse.SC_OK);
+                response.setHeader("X-Powered-By", "SOA Cookbook");
+                response.setContentType("text/xml");
+                //Log for debug:
+                System.out.println("\nSending Response:\n");
+                reply.writeTo(System.out);
+                                
+                //Return response
+                OutputStream os = response.getOutputStream();
+                reply.writeTo(os);
+                os.flush();
+                os.close();
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            } 
+        } catch (Exception ex){
+            throw new ServletException("SAAJ could not " +
+                    "understand request. " + ex.getMessage());
+        }
+    }
+    
+    private SOAPMessage createReply(HttpServletRequest request) 
+            throws SOAPException, IOException {
+        
+        String ns = "urn:soacookbook:saaj";
+        
+        //Get all HTTP Headers
+        MimeHeaders headers = getHeaders(request);
+            
+        //Get incoming request as stream
+        InputStream is = request.getInputStream();  
+            
+        //use headers and request stream to create SOAP Msg
+        SOAPMessage reqMsg = mf.createMessage(headers, is);
+        
+        //Create new message for response
+        SOAPMessage msg = mf.createMessage();
+        SOAPPart part = msg.getSOAPPart();
+        SOAPEnvelope env = part.getEnvelope();
+        SOAPBody body = env.getBody();
+        
+        //Add Namespace
+        env.createName("message", "soa", ns);
+        
+        //Put data in response
+        Name bn = env.createName("message", "soa", ns);
+        SOAPBodyElement be = body.addBodyElement(bn);
+                
+        //Inspect request and get data from it as necessary...
+        String name = request.getParameter("name");
+        be.addTextNode("Hello, " + name + "!");
+        
+        msg.saveChanges();
+        
+        return msg;
+    }
+    
+    //Here we inspect HTTP Request headers
+    @SuppressWarnings("unchecked")
+    private MimeHeaders getHeaders(HttpServletRequest request) 
+                        throws SOAPException {
+        MimeHeaders headers = new MimeHeaders();
+        Enumeration<String> names = request.getHeaderNames();
+        while (names.hasMoreElements()){
+            String key = names.nextElement();
+            String value = request.getHeader(key);
+            headers.addHeader(key, value);
+            System.out.println("Added MIME Header: " + 
+                    key + "=" + value);
+        }
+        return headers;
+    }
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+    } 
+    
+    @Override
+    protected void doGet(HttpServletRequest request, 
+            HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        doPost(request, response);
+    }
+    
+    public SAAJProviderServlet() {  }
+}
+
+    
+    
+====================================
+<html>
+  <body>
+    <a href="SAAJProviderServlet?name=Eben">CLICK ME</a>
+  </body>
+</html>
+    
+    
+====================================
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+      http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+  <servlet>
+    <servlet-name>SAAJProviderServlet</servlet-name>
+    <servlet-class>saaj.provider.SAAJProviderServlet</servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>SAAJProviderServlet</servlet-name>
+    <url-pattern>/SAAJProviderServlet</url-pattern>
+  </servlet-mapping>
+...
+    
+    
+====================================
+HTTP/1.x 200 OK
+X-powered-by: SOA Cookbook
+Server: Sun Java System Application Server 9.1_02
+Content-Type: text/xml
+Transfer-Encoding: chunked
+Date: Fri, 25 Jul 2008 18:21:21 GMT
+
+<SOAP-ENV:Envelope 
+xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header/>
+<SOAP-ENV:Body>
+<soa:message xmlns:soa="urn:soacookbook:saaj">
+  Hello, Eben!
+</soa:message>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+    
+    
+====================================
+//SOAP 1.1
+Name codeName = soapFactory.createName("Server", "", 
+                   SOAPConstants.URI_NS_SOAP_ENVELOPE);
+fault.setFaultCode(codeName);
+fault.setFaultActor("http://soacookbook.com/books");
+fault.setFaultString("The remote susbsytem host is unavailable."); 
+    
+    
+====================================
+SOAPBody body = responseMessage.getSOAPBody();
+if (body.hasFault()) {
+  SOAPFault fault = body.getFault();
+
+  Name code = fault.getFaultCodeAsName();
+  String string = fault.getFaultString();
+  String actor = fault.getFaultActor();
+}
+    
+    
+====================================
+Detail d = body.getFault().getDetail();
+
+Iterator<DetailEntry> it = d.getDetailEntries();
+while (it.hasNext()) {
+    DetailEntry e = it.next();
+    System.out.println("Detail Entry = " + e.getValue());
+}
+    
+    
+====================================
+QName name = new QName("http://example.com/quotes",
+                       "getQuote", "e");
+
+//Create the DetailEntry and add it
+d.addDetailEntry(name);
+    
+    
+==================

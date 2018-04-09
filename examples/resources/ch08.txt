@@ -1,0 +1,2665 @@
+chapter: RESTful Web Services
+==================
+http://www.overstock.com/Home-Garden/Tiffany-style-Table-Lamp/2260849/product.html
+    
+    
+====================================
+Example: Product.java
+
+package com.soacookbook;
+
+import javax.xml.bind.annotation.XmlType;
+
+@XmlType
+public class Product {
+
+    private String id;
+    private String name;
+    private double price;
+
+    public Product() { }
+
+//Getters and Setters omitted...
+    
+    
+====================================
+Example: ProductCatalog.java
+
+package com.soacookbook;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement
+public class ProductCatalog {
+
+  private List<Product> products;
+
+  public ProductCatalog() {
+    products = new ArrayList<Product>();
+    Product p = new Product();
+    p.setId("123");
+    p.setName("Shirt");
+    p.setPrice(159.95D);
+
+    Product p2 = new Product();
+    p2.setId("456");
+    p2.setName("Monkey");
+    p2.setPrice(2500D);
+
+    products.add(p);
+    products.add(p2);
+  }
+
+  public List<Product> getProducts() {
+    return products;
+  }
+    
+  public void setProducts(List<Product> products) {
+        this.products = products;
+  }
+    
+  @Override
+  public String toString() {
+      return products.toString();
+  }
+}
+    
+    
+====================================
+Example: SimpleRestfulServlet.java
+
+package com.soacookbook;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.ServletOutputStream;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+
+/**
+ * Implements a simple RESTful service.
+ */
+ public class SimpleRestServlet extends javax.servlet.http.HttpServlet 
+     implements javax.servlet.Servlet {
+  
+    public SimpleRestServlet() {
+        super();
+    } 
+
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+        throws ServletException, IOException {
+
+        System.out.println("DoGet invoked on RESTful service.");
+        ProductCatalog catalog = new ProductCatalog();
+
+        Source xmlSource = asXml(catalog);
+
+        ServletOutputStream out = response.getOutputStream();
+        response.setContentType("text/xml");
+
+        StreamResult st = new StreamResult(out);
+
+        try {
+            Transformer t = 
+                 TransformerFactory.newInstance().newTransformer();
+            t.transform(xmlSource, st);
+        } catch (Exception e) {
+            throw new ServletException(e);
+        }
+
+        System.out.println("All done.");
+        }
+
+        private static Source asXml(ProductCatalog pc) throws ServletException {
+            System.out.println("Marshalling...");
+
+            Source source = null;
+            Document doc = null;
+
+            try {
+                JAXBContext ctx = JAXBContext.newInstance(ProductCatalog.class);
+                Marshaller m = ctx.createMarshaller();
+
+                DocumentBuilder parser = 
+                DocumentBuilderFactory.newInstance().newDocumentBuilder();
+                doc = parser.newDocument();
+
+                System.out.println("Products=" + pc);
+                m.marshal(pc, doc);
+
+                System.out.println("Marshalled catalog to XML.");
+
+            } catch (JAXBException je) {
+                throw new ServletException(je);
+            } catch (ParserConfigurationException pce) {
+                throw new ServletException(pce);
+            }
+
+            source = new DOMSource(doc);
+
+            System.out.println("Returning XML source.");
+            return source;
+            }
+        
+        protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+            doGet(request, response);
+        } 
+}
+    
+    
+====================================
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+    http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+    <servlet>
+        <servlet-name>SimpleRestServlet</servlet-name>
+        <servlet-class>com.soacookbook.SimpleRestServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>SimpleRestServlet</servlet-name>
+        <url-pattern>/Products</url-pattern>
+    </servlet-mapping>
+    <session-config>
+/...
+    
+    
+====================================
+<a href="Products">Get Products</a>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<productCatalog>
+  <products>
+    <id>123</id>
+    <name>Shirt</name>
+    <price>159.95</price>
+  </products>
+  <products>
+    <id>456</id>
+    <name>Monkey</name>
+    <price>2500.0</price>
+  </products>
+</productCatalog>
+    
+    
+====================================
+public T invoke(T request)
+    
+    
+====================================
+import javax.xml.transform.Source;
+import javax.xml.ws.Provider;
+import javax.xml.ws.WebServiceProvider;
+import javax.xml.ws.http.HTTPBinding;
+
+@WebServiceProvider
+@BindingType(HTTPBinding.HTTP_BINDING)
+public class JaxWsRestfulService implements Provider<Source> {
+    public Source invoke(Source request) { 
+        //do work... 
+    }
+}
+    
+    
+====================================
+Example: DigitalLibraryRestSearch.java
+
+package simplerestclient;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.URLEncoder;
+
+/**
+ * Invokes a RESTful service.
+ */
+public class DigitalLibraryRestSearch {
+    public static void main(String... args) throws Exception {
+        doDigLib();
+    }
+
+    public static void doDigLib() throws Exception {
+        System.out.println("Invoking Digital Library.");
+        
+        //Create socket
+        String hostname = "www.dlese.org";
+        int port = 80;
+        InetAddress addr = InetAddress.getByName(hostname);
+        Socket socket = new Socket(addr, port);
+        
+        String path = "/dds/services/ddsws1-1?";
+        
+        //Create query string
+        String query = "verb" + "=" + URLEncoder.encode("Search", "UTF-8");
+        query += "&" + "q" + "=" + URLEncoder.encode("web services", "UTF-8");
+        query += "&" + "s" + "=" + URLEncoder.encode("0", "UTF-8");
+        query += "&" + "n" + "=" + URLEncoder.encode("10", "UTF-8");
+        query += "&" + "client" + "=" + URLEncoder.encode("ddsws-explorer", "UTF-8");
+        
+        //write content to create HTTP request
+        BufferedWriter bw = new BufferedWriter(
+            new OutputStreamWriter(socket.getOutputStream(), "UTF8"));
+        bw.write("POST " + path + " HTTP/1.0\r\n");
+        bw.write("Content-Length: " + query.length() + "\r\n");
+        bw.write("Content-Type: application/x-www-form-urlencoded\r\n");
+        bw.write("\r\n");
+                
+        //Submit request
+        bw.write(query);
+        bw.flush();
+        
+        //Read response off socket input
+        InputStream is = socket.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line = "";
+        while ((line = br.readLine()) != null) {
+          System.out.println(line);
+        }
+        
+        socket.close();
+        System.out.println("\nAll done.");
+    }
+}
+    
+    
+====================================
+HTTP/1.1 200 OK
+Set-Cookie: UCARcwebsession=7e985be83e45b9e8baeebb58; path=/; 
+expires=Sun, 14-Sep-2008 21:51:42 GMT
+Date: Sun, 14 Sep 2008 20:21:46 GMT
+Server: Apache-Coyote/1.1
+Cache-Control: max-age=0
+Expires: Sun, 14 Sep 2008 20:21:46 GMT
+Set-Cookie: JSESSIONID=09E46564A820483FBF30D95190B5F48C; Path=/dds
+Content-Type: text/xml;charset=UTF-8
+X-Cache: MISS from www.dlese.org
+Connection: close
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<DDSWebService xmlns="http://www.dlese.org/Metadata/ddsws" 
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+ xsi:schemaLocation="http://www.dlese.org/Metadata/ddsws 
+  http://www.dlese.org/Metadata/ddsws/1-1/ddsws.xsd">
+ <Search>
+    <resultInfo>
+       <totalNumResults>34</totalNumResults>
+      <totalNumRecordsInLibrary>14494</totalNumRecordsInLibrary>                                                
+       <numReturned>10</numReturned>
+       <offset>0</offset>
+   </resultInfo>
+   <results>
+     <record>...</record>
+   </results>
+ </Search>
+    
+    
+====================================
+GET http://finance.google.com/finance/feeds/default/portfolios HTTP/1.1
+    
+    
+====================================
+<feed xmlns='http://www.w3.org/2005/Atom'
+    xmlns:gf='http://schemas.google.com/finance/2007'
+    xmlns:gd='http://schemas.google.com/g/2005'>
+  <id>http://finance.google.com/finance/feeds/someUser@gmail.com/portfolios</id>
+  <updated>2008-09-14T01:29:50.000Z</updated>
+  <category scheme='http://schemas.google.com/g/2005#kind'
+    term='http://schemas.google.com/finance/2007#portfolio'/>
+  <title type='text'>Portfolio Feed</title>
+  <link rel='alternate' type='text/html'
+    href='http://finance.google.com/finance/portfolio?action=view'/>
+
+//...
+    
+    
+====================================
+http://finance.google.com/finance/feeds/default/portfolios/1
+    
+    
+====================================
+Example: GoogleFinanceRestClient.java
+
+package simplerestclient;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.URLEncoder;
+import java.security.Security;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.SSLSocket;
+
+/**
+ * Google finance API client authenticates over SSL, then
+ * uses the Auth token to create a new portfolio, then
+ * reads the list of portfolios for this user.
+ * See:
+ * http://code.google.com/apis/gdata/reference.html
+ * http://code.google.com/apis/accounts/docs/AuthForInstalledApps.html#Request
+ * https://www.google.com/accounts/ClientLogin
+ */
+public class GoogleFinanceRestClient {
+    
+    //replace with your account username and password
+    private static String ACCOUNT = "me@gmail.com";
+    private static String PASSWORD = "xxx";
+    
+    //use this to connect to API for auth token
+    private static String AUTH_URL = "www.google.com";
+    
+    //use this to interact with API once authorized
+    private static String FINANCE_URL = "finance.google.com";
+    
+    //This is a formattable string. You must replace
+    //the %s to add your title
+    private static String ATOM_PORTFOLIO_ADD_XML = 
+           "<entry xmlns='http://www.w3.org/2005/Atom' " + 
+           "xmlns:gf='http://schemas.google.com/finance/2007' " + 
+           "xmlns:gd='http://schemas.google.com/g/2005'>" +
+           "<title type='text'>%s</title>" +
+           "<gf:portfolioData currencyCode='USD'/></entry>";
+    
+    public static void main(String... arg) throws Exception {
+        
+        //Create an instance of this class
+        GoogleFinanceRestClient client = new GoogleFinanceRestClient();
+        
+        //authenticate over SSL to get a session token
+        String token = client.getAuthToken();
+        
+        //Create a new portfoliio
+        client.addPortfolio(token, "My Restful Portfolio");
+        
+        //Retrieve list of current portfolios
+        client.getPortfolios(token);
+    }
+    
+    /**
+     * Retrieve the list of available portfolios for 
+     * the authorized user.
+     */
+    public void getPortfolios(String token) throws Exception {  
+        //Now that we have auth token, lose the SSL
+        InetAddress addr = InetAddress.getByName(FINANCE_URL);
+        Socket socket = new Socket(addr, 80);
+                        
+        //Create HTTP request using headers 
+        Writer out = new OutputStreamWriter(socket.getOutputStream());
+        out.write("GET /finance/feeds/default/portfolios HTTP/1.0\r\n");
+        out.write("Content-Length: " + 0 + "\r\n");
+        out.write("Content-Type: " +
+                "application/x-www-form-urlencoded\r\n");
+        out.write("Authorization: GoogleLogin auth=" + 
+                token + "\r\n");
+        out.write("\r\n");
+               
+        //there is no body to this request
+        out.flush();
+        
+        //Read response off socket input
+        System.out.println("\nReading GET PORTFOLIOS Response...");
+        InputStream is = socket.getInputStream();
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader(is));
+        String line = "";
+        while ((line = br.readLine()) != null) {
+          System.out.println(line);
+        }
+        
+        socket.close();
+        System.out.println("\nAll done.");
+    }
+        
+    /**
+     * Creates a new portfolio of the given name using the 
+     * current auth token.
+     */
+    public void addPortfolio(String token, String portfolioName) 
+            throws Exception {  
+        
+        //Now that we have auth token, lose the SSL
+        InetAddress addr = 
+                InetAddress.getByName(FINANCE_URL);
+        Socket socket = new Socket(addr, 80);
+        
+        //you can get a Bad Request response if length is wrong
+        String request = String.format(ATOM_PORTFOLIO_ADD_XML, portfolioName);
+                        
+        Writer out = new OutputStreamWriter(socket.getOutputStream());
+        out.write("POST /finance/feeds/default/portfolios HTTP/1.0\r\n");
+        out.write("Content-Length: " + request.length() + "\r\n");
+        out.write("Content-Type: application/atom+xml\r\n");
+        out.write("Authorization: GoogleLogin auth=" + token + "\r\n");
+        out.write("\r\n");
+        
+        out.write(request);
+        
+        System.out.println("\nADD REQUEST BODY:\n" + request);
+                       
+        out.flush();
+        
+        //Read response off socket input
+        System.out.println("\nReading ADD PORTFOLIO POST Response...");
+        InputStream is = socket.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line = "";
+        
+        //Just print response to console.
+        while ((line = br.readLine()) != null) {
+          System.out.println(line);
+        }
+        
+        socket.close();
+        System.out.println("\nAll done.");
+    }
+
+    /**
+     * Use your existing account to get an auth token for
+     * this session. You will use the string returned by
+     * this method in subsequent requests interacting with
+     * the service. 
+     */
+    public String getAuthToken() throws Exception {
+        System.out.println("Invoking Google to get Auth Token.");
+
+        //get an SSL connection
+        SSLSocket socket = getSecureSocket();
+        
+        //build request       
+        String query = q("Email", ACCOUNT);
+        query += "&" + q("Passwd", PASSWORD);
+        query += "&" + q("accountType", "GOOGLE");
+        query += "&" + q("service", "finance");
+        query += "&" + q("source", "myco-test-1");
+                
+        //Create a request
+        Writer out = new OutputStreamWriter(socket.getOutputStream());
+        out.write("POST /accounts/ClientLogin HTTP/1.0\r\n");
+        out.write("Content-Length: " + query.length() + "\r\n");
+        out.write("Content-Type: application/x-www-form-urlencoded\r\n");
+        out.write("\r\n");
+        out.write(query);
+                
+        //send request
+        out.flush();
+        
+        //Get Response
+        InputStream is = socket.getInputStream();
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line = "";
+        String authToken = "";
+        
+        //this call returns a few items. We need to get
+        //the AuthToken only out of it. 
+        while ((line = br.readLine()) != null) {
+          System.out.println(line);
+          if (line.startsWith("Auth=")){
+              authToken = line.substring(
+                      line.indexOf("Auth=")+5, line.length());
+          }
+        }
+        if (!"".equals(authToken)){
+            System.out.println("Got AUTH TOKEN=" + authToken);
+        }
+        
+        //clean up and return token for future calls
+        socket.close();
+        return authToken;
+    }
+                 
+    //Convenience to create Secure Socket connection
+    private SSLSocket getSecureSocket() throws Exception {  
+        int HTTPS_PORT = 443;
+        Security.addProvider(
+                new com.sun.net.ssl.internal.ssl.Provider());
+
+        SSLSocketFactory sf = (SSLSocketFactory)SSLSocketFactory.getDefault();
+        SSLSocket socket = (SSLSocket)sf.createSocket(
+                AUTH_URL, HTTPS_PORT);
+        String[] suites = socket.getSupportedCipherSuites();
+        socket.setEnabledCipherSuites(suites);
+        
+        //allows encrypted connection
+        return socket;
+    }
+    
+    //Convenience to build and encode key/values used in headers
+    private static String q(String key, String value) throws Exception {
+        return key + "=" + URLEncoder.encode(value, "UTF-8");
+    } 
+}
+    
+    
+====================================
+SID=DQAAAH0AAAA3FKWU...-AtltIlsfPdU62RP0B31cqnRzErHL9ppsg
+LSID=DQAAAH8AAAAffNC...-E_kPEN76bcZewVajOu3s6zjVlmPa0qUzyuzRUaw
+Auth=DQAAAH8AAAAffNC...-AYIySHu9BMnDrJ4UDZA3Jrb1n4mCaoBg
+    
+    
+====================================
+Invoking Google to get Auth Token.
+HTTP/1.0 200 OK
+Content-Type: text/plain
+Cache-control: no-cache, no-store
+Pragma: no-cache
+Expires: Mon, 01-Jan-1990 00:00:00 GMT
+Date: Mon, 15 Sep 2008 03:28:23 GMT
+Content-Length: 563
+Server: GFE/1.3
+Connection: Close
+
+SID=DQAAAH0AAAA3FKWU...-AtltIlsfPdU62RP0B31cqnRzErHL9ppsg
+LSID=DQAAAH8AAAAffNC...-E_kPEN76bcZewVajOu3s6zjVlmPa0qUzyuzRUaw
+Auth=DQAAAH8AAAAffNC...-AYIySHu9BMnDrJ4UDZA3Jrb1n4mCaoBg
+Got AUTH TOKEN=DQAAAH8A...-AYIySHu9BMnDrJ4UDZA3Jrb1n4mCaoBg
+
+ADD REQUEST BODY:
+<entry xmlns='http://www.w3.org/2005/Atom' 
+  xmlns:gf='http://schemas.google.com/finance/2007' 
+  xmlns:gd='http://schemas.google.com/g/2005'>
+  <title type='text'>My Restful Portfolio</title>
+  <gf:portfolioData currencyCode='USD'/>
+</entry>
+
+Reading ADD PORTFOLIO POST Response...
+HTTP/1.0 201 Created
+Content-Type: application/atom+xml; charset=UTF-8
+Cache-Control: max-age=0, must-revalidate, private
+GData-Version: 1.0
+Location: http://finance.google.com/finance/feeds/default/portfolios/3
+Content-Location: http://finance.google.com/finance/feeds/default/portfolios/3
+Date: Mon, 15 Sep 2008 03:28:24 GMT
+Server: GFE/1.3
+Connection: Close
+
+<?xml version='1.0' encoding='UTF-8'?>
+<entry xmlns='http://www.w3.org/2005/Atom' 
+xmlns:gf='http://schemas.google.com/finance/2007' 
+xmlns:gd='http://schemas.google.com/g/2005'>
+<id>http://finance.google.com/finance/feeds/me@gmail.com/portfolios/3</id>
+<updated>2008-09-15T03:28:24.000Z</updated>
+<category scheme='http://schemas.google.com/g/2005#kind' 
+term='http://schemas.google.com/finance/2007#portfolio'/>
+<title type='text'>My Restful Portfolio</title>
+<link rel='self' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/3'/>
+<link rel='edit' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/3'/>
+<gd:feedLink 
+href='http://finance.google.com/finance/feeds/me@gmail.com/portfolios/3/positions'/>
+<gf:portfolioData currencyCode='USD' 
+gainPercentage='0.0' return1w='0.0' return1y='0.0' 
+return3m='0.0' return3y='0.0' return4w='0.0' return5y='0.0' 
+returnOverall='0.0' returnYTD='0.0'/>
+</entry>
+
+All done.
+
+Reading GET PORTFOLIOS Response...
+HTTP/1.0 200 OK
+Content-Type: application/atom+xml; charset=UTF-8
+Cache-Control: max-age=0, must-revalidate, private
+GData-Version: 1.0
+Last-Modified: Mon, 15 Sep 2008 03:28:24 GMT
+Date: Mon, 15 Sep 2008 03:28:24 GMT
+Server: GFE/1.3
+Connection: Close
+
+<?xml version='1.0' encoding='UTF-8'?><feed xmlns='http://www.w3.org/2005/Atom' 
+xmlns:openSearch='http://a9.com/-/spec/opensearchrss/1.0/' 
+xmlns:gf='http://schemas.google.com/finance/2007' 
+xmlns:gd='http://schemas.google.com/g/2005'>
+
+<id>http://finance.google.com/finance/feeds/me@gmail.com/portfolios</id>
+<updated>2008-09-15T03:28:24.000Z</updated>
+<category scheme='http://schemas.google.com/g/2005#kind' 
+term='http://schemas.google.com/finance/2007#portfolio'/>
+<title type='text'>Portfolio Feed</title>
+<link rel='alternate' type='text/html' 
+href='http://finance.google.com/finance/portfolio?action=view'/>
+<link rel='http://schemas.google.com/g/2005#feed' 
+type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios'/>
+<link rel='http://schemas.google.com/g/2005#post' 
+type='application/atom+xml' href='http://finance.google.com/finance/feeds/default/portfolios'/>
+<link rel='self' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios'/>
+<openSearch:totalResults>2</openSearch:totalResults>
+<openSearch:startIndex>1</openSearch:startIndex>
+<openSearch:itemsPerPage>2</openSearch:itemsPerPage>
+<entry><id>http://finance.google.com/finance/feeds/me@gmail.com/portfolios/1</id>
+<updated>2008-09-14T22:58:41.000Z</updated>
+
+<category scheme='http://schemas.google.com/g/2005#kind' 
+term='http://schemas.google.com/finance/2007#portfolio'/>
+<title type='text'>Eben Portfolio</title>
+<link rel='self' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/1'/>
+<link rel='edit' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/1'/>
+<gd:feedLink href='http://finance.google.com/finance/feeds/me@gmail.com/portfolios/1/positions'/>
+<gf:portfolioData currencyCode='USD' gainPercentage='0.0' return1w='0.0' 
+return1y='0.0' return3m='0.0' return3y='0.0' return4w='0.0' return5y='0.0' 
+returnOverall='0.0' returnYTD='0.0'/>
+</entry>
+
+<entry>
+<id>http://finance.google.com/finance/feeds/me@gmail.com/portfolios/3</id>
+<updated>2008-09-15T03:28:24.000Z</updated>
+<category scheme='http://schemas.google.com/g/2005#kind' 
+term='http://schemas.google.com/finance/2007#portfolio'/>
+<title type='text'>My Restful Portfolio</title>
+<link rel='self' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/3'/>
+<link rel='edit' type='application/atom+xml' 
+href='http://finance.google.com/finance/feeds/default/portfolios/3'/>
+<gd:feedLink 
+href='http://finance.google.com/finance/feeds/me@gmail.com/portfolios/3/positions'/>
+<gf:portfolioData currencyCode='USD' gainPercentage='0.0' 
+return1w='0.0' return1y='0.0' return3m='0.0' 
+return3y='0.0' return4w='0.0' return5y='0.0' 
+returnOverall='0.0' returnYTD='0.0'/></entry></feed>
+
+All done.
+    
+    
+====================================
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+    http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+  <servlet>
+    <servlet-name>ServletAdaptor</servlet-name>
+    <servlet-class>
+     com.sun.jersey.spi.container.servlet.ServletContainer
+    </servlet-class>
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>ServletAdaptor</servlet-name>
+    <url-pattern>/resources/*</url-pattern>
+  </servlet-mapping>
+...
+    
+    
+====================================
+Oct 25, 2008 3:38:34 PM org.apache.catalina.startup.HostConfig deployWAR
+INFO: Deploying web application archive restexamples.war
+Oct 25, 2008 3:38:34 PM com.sun.jersey.api.core.ClasspathResourceConfig init
+INFO: Scanning for root resource and provider classes in the paths:
+  C:\programs\tomcat\apache-tomcat-6.0.16\webapps\restexamples\WEB-INF\lib
+  C:\programs\tomcat\apache-tomcat-6.0.16\webapps\restexamples\WEB-INF\classes
+Oct 25, 2008 3:38:34 PM com.sun.jersey.api.core.ClasspathResourceConfig init
+INFO: Root resource classes found:
+  class com.soacookbook.ProductResource
+Oct 25, 2008 3:38:34 PM com.sun.jersey.api.core.ClasspathResourceConfig init
+INFO: Provider classes found:
+    
+    
+====================================
+Oct 25, 2008 3:58:19 PM com.sun.jersey.impl.application.WebApplicationImpl processRootResources
+SEVERE: The ResourceConfig instance does not contain any root resource classes.
+    
+    
+====================================
+Example: A RESTful Hello, World Application using Jersey.
+
+package com.soacookbook;
+
+import javax.ws.rs.Path;
+import javax.ws.rs.GET;
+import javax.ws.rs.ProduceMime;
+
+/**
+ * Simplest REST web service.
+ */
+@Path("/helloRest")
+public class HelloRest {
+
+    /**
+     * Retrieves representation of an instance of 
+     * com.soacookbook.HelloRest.java
+     * @return a string with HTML text.
+     */
+    @GET
+    @ProduceMime("text/html")
+    public String sayHello() {
+        return "<html><body><h1>Hello from REST!</body></h1></html>";
+    }
+}
+    
+    
+====================================
+Example: Our web.xml file ensures that the Jersey servlet intercepts
+        requests bound to the "resources" URL pattern.
+
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee" 
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+ xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+  http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+    <servlet>
+        <servlet-name>JerseyAdapter</servlet-name>
+        <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>JerseyAdapter</servlet-name>
+        <url-pattern>/resources/*</url-pattern>
+    </servlet-mapping>
+    <welcome-file-list>
+        <welcome-file>index.jsp</welcome-file>
+    </welcome-file-list>
+</web-app>
+    
+    
+====================================
+Example: Using a PathParameter to Get Specific Products in a RESTful
+        URI
+
+package com.soacookbook;
+
+import javax.ws.rs.Path;
+import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
+import javax.ws.rs.ProduceMime;
+import javax.ws.rs.ConsumeMime;
+import javax.ws.rs.POST;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.UriInfo;
+
+/**
+ * API for Products.
+ */
+@Path("/products/{id}")
+public class ProductResource {
+    @Context
+    private UriInfo context;
+    
+    /** Creates a new instance of ProductResource */
+    public ProductResource() { }
+
+    @GET
+    @ProduceMime("text/plain")
+    public String getProduct(@PathParam("id") int productId) {
+        switch (productId) {
+            case 1: return "A Shiny New Bike";
+            case 2: return "Big Wheel";
+            case 3: return "Taser: Toddler Edition";
+            default: return "No such product";
+        }
+    }
+}
+    
+    
+====================================
+Taser: Toddler Edition
+    
+    
+====================================
+Example: A Path Template Using a Regular Expression
+
+@Path("/products/{id: \\d{3}}")
+public class ProductResource {
+    
+    public ProductResource() { }
+
+    @GET
+    @Produces("text/plain")
+    public String getProductPlainText(@PathParam("id") int productId) {
+    
+        return "Your Product is: " + productId;
+    }
+}
+    
+    
+====================================
+Your Product is: 555
+    
+    
+====================================
+Example: Accessing a Query Parameter Value
+
+package com.soacookbook;
+
+import javax.ws.rs.DefaultValue;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.UriInfo;
+
+/**
+ * Shows accessing Query Parameters.
+ */
+@Path("/products")
+public class ProductQuery {
+    @Context
+    private UriInfo context;
+    
+    /** Creates a new instance of ProductResource */
+    public ProductQuery() { }
+
+    @GET
+    @Produces("text/xml")
+    public String getProducts(
+       @PathParam("id") int productId, 
+       @QueryParam("results") 
+       @DefaultValue("5") int numResults) {
+    
+       StringBuilder result = new StringBuilder("<products>");
+    
+       //return the number of results requested
+       for (int i = 0; i < numResults; i++) {
+         result.append("<p>Product " + i + "</p>");
+       }
+       result.append("</products>");
+       return result.toString();
+    }
+}
+    
+    
+====================================
+<products><p>Product 0</p><p>Product 1</p><p>Product 2</p></products>
+    
+    
+====================================
+Example: Employee.java, annotated with JAXB annotations to assist in
+        automatic marshalling.
+
+package com.soacookbook.rest.xml;
+
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement(name="employee")
+public class Employee {
+    @XmlElement(name="id")  
+    int id;  
+   
+    @XmlElement(name="name")  
+    String name;
+}
+    
+    
+====================================
+Example: EmployeeService.java, using the JAXB Marshaller to return XML
+        representations of Employee instances.
+
+package com.soacookbook.rest.xml;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+
+@Path("/emps") 
+public class EmployeeService {
+    
+    private static Map<Integer, Employee> emps = populateDatabase();
+    
+    public EmployeeService() { }
+    
+    @GET  
+    @Path("{id}")  
+    @Produces("application/xml") 
+    public Employee getEmployee(@PathParam("id") int empId) {
+        
+        return emps.get(empId);
+    }
+    
+    private static Map<Integer, Employee> populateDatabase(){
+        Map<Integer, Employee> emps = new HashMap<Integer, Employee>();
+        
+        Employee e1 = new Employee();
+        e1.id = 1;
+        e1.name = "Bill Gates";
+        
+        Employee e2 = new Employee();
+        e2.id = 2;
+        e2.name = "Larry Ellison";
+        
+        Employee e3 = new Employee();
+        e3.id = 3;
+        e3.name = "Steve Jobs";
+        
+        emps.put(1, e1);
+        emps.put(2, e2);
+        emps.put(3, e3);
+        return emps;
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<employee>
+<id>2</id>
+<name>Larry Ellison</name>
+</employee>
+    
+    
+====================================
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    
+    
+====================================
+Example: DifferentRepresentations.java is a RESTful service that returns
+        three variations on the same resource
+
+package com.soacookbook.rest.ex;
+
+import java.io.File;
+
+import javax.activation.MimetypesFileTypeMap;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+
+/**
+ * If we put a @Produces annotation on the class level, 
+ * that will be the value matched despite browser preferences 
+ * in the Accept header.
+ */
+@Path("/duke")
+@Produces("text/plain")
+public class DifferentRepresentations {
+    private static final String IMG_PATH = 
+        "C:\\programs/eclipse/workspace/restexamples/WebContent/duke.gif";
+    
+    @GET
+    @Produces("text/html")
+    public String doGetAsHtml() {
+        return "<html><h1>Html Duke</h1></html>";
+    }
+  
+    //notice no override, as this is default
+    @GET
+    public String doGetAsPlainText() {
+        return "Plain Duke";
+    }
+    
+    @GET
+    @Produces("image/*")
+    public Response doGetAsImage() {
+        File image = new File(IMG_PATH);
+
+        if (!image.exists()) {
+            throw new WebApplicationException(404);
+        }
+
+        String type = new MimetypesFileTypeMap().getContentType(image);
+        return Response.ok(image, type).build();
+    }
+
+    @GET
+    @Produces("text/xml")
+    public String doGetAsXml() {
+        return "<?xml version='1.0' encoding='utf-8'?>" +
+                "<mascot>Xml Duke</mascot>";
+    }
+}
+    
+    
+====================================
+Example: A programmatic client for the REST service allows us to specify
+        our own HTTP Accept headers and see each of the
+        representations.
+
+package com.soacookbook.rest.ex;
+
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+
+import javax.imageio.ImageIO;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
+
+/**
+ * Gets three different representations of the same
+ * resource (Duke): HTML, XML, and an image.
+ * Note that all three methods point to the exact same URL, 
+ * and specify only a different "Accept" header; there's no
+ * query parameter, etc. 
+ * 
+ * This class is used with DifferentRepresentations.java which
+ * is the REST service.
+ */
+public class DifferentRepClient {
+    
+    private static String RESOURCE_URL = 
+        "http://localhost:8080/restexamples/resources/duke";
+    
+    //client path to save image in current execution dir
+    private static String SAVE_TO = 
+        System.getProperty("user.dir") + "/dukeClient.gif";
+
+    /**
+     * Use with HTTP client in Apache Commons to 
+     * get alternative content from DifferentRepresentations
+     * REST service.
+     */
+    public static void main(String... args) {
+        
+        getXml();    
+        System.out.println("Got XML. Now getting HTML...");
+        
+        getHtml();
+        System.out.println("Now getting image...");
+        
+        getImage();
+        //now that it's saved on client, show image:
+        new ImageViewer(SAVE_TO).show();  
+        
+        System.out.println("All done.");
+    }
+    
+    private static void getXml() {
+        HttpClient client = new HttpClient();
+        GetMethod get = new GetMethod(RESOURCE_URL);
+        get.setRequestHeader("Accept", "text/xml");
+        
+        try {
+            int httpStatus = client.executeMethod(get);
+            
+            if (HttpStatus.SC_OK == httpStatus) {
+                String xmlResponse = get.getResponseBodyAsString();
+                System.out.println("Xml Response: " + 
+                        xmlResponse);
+            }
+            
+        } catch (HttpException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //clean up
+            get.releaseConnection();
+        }
+    }
+    
+    private static void getHtml() {
+        HttpClient client = new HttpClient();
+        GetMethod get = new GetMethod(RESOURCE_URL);
+        get.setRequestHeader("Accept", "text/html");
+        
+        try {
+            int httpStatus = client.executeMethod(get);
+            
+            if (HttpStatus.SC_OK == httpStatus) {
+                String htmlResponse = get.getResponseBodyAsString();
+                System.out.println("Html Response: " + 
+                        htmlResponse);
+            }
+            
+        } catch (HttpException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //clean up
+            get.releaseConnection();
+        }
+    }    
+    
+    private static void getImage() {
+        HttpClient client = new HttpClient();
+        GetMethod get = new GetMethod(RESOURCE_URL);
+        get.setRequestHeader("Accept", "image/gif");
+        
+        try {
+            int httpStatus = client.executeMethod(get);
+            
+            if (HttpStatus.SC_OK == httpStatus) {
+                InputStream responseBody = get.getResponseBodyAsStream();
+               
+                System.out.println("Response Size=" + 
+                        get.getResponseContentLength());
+                System.out.println("Response Type=" + 
+                        get.getResponseHeader("Content-Type"));
+                
+                
+                //save retrieved file on local path
+                File outputFile = new File(SAVE_TO);
+                BufferedImage img = ImageIO.read(responseBody);
+                ImageIO.write(img, "gif", outputFile);          
+            }
+            
+        } catch (HttpException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //clean up
+            get.releaseConnection();
+        }
+    }
+}
+    
+    
+====================================
+Example: ImageViewer.java displays the image retrieved by the
+        client.
+
+package com.soacookbook.rest.ex;
+
+import java.awt.BorderLayout;
+import java.awt.EventQueue;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+
+import javax.imageio.ImageIO;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+
+/**
+ * Shows an image in a window given a file path.
+ * Used by the DifferentRepClient class to prove the client 
+ * got the image.
+ */
+public class ImageViewer {
+    final private JFrame frame = new JFrame("Image Viewer");
+
+    //constructor reads image and sets up frame
+    public ImageViewer(String fileLocation) {     
+        try {
+            //read newly saved image file
+            File input = new File(fileLocation);
+            BufferedImage image = ImageIO.read(input);
+            
+            //set up window
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            
+            //put image on it
+            Icon icon = new ImageIcon(image);
+            JLabel label = new JLabel(icon);
+            frame.getContentPane().add(
+                    label, BorderLayout.CENTER);
+            
+            //make image fit window
+            frame.pack();
+            
+            //now it's all set to show
+
+        } catch (IOException ie) {
+            System.out.println("Error:" + ie.getMessage());
+            System.exit(-1);
+        }
+    }
+
+    //creates the thread and shows it
+    public void show() {
+        Runnable runner = new FrameDisplay();
+        EventQueue.invokeLater(runner);
+    }
+    
+    private class FrameDisplay implements Runnable {
+        public void run() {
+            frame.setVisible(true);
+     }
+   }
+}
+    
+    
+====================================
+Xml Response: <?xml version='1.0' encoding='utf-8'?><mascot>Xml Duke</mascot>
+Got XML. Now getting HTML...
+Html Response: <html><h1>Html Duke</h1></html>
+Now getting image...
+Response Size=13715
+Response Type=Content-Type: image/gif
+
+All done.
+    
+    
+====================================
+Example: Post and Get User Service
+
+package com.soacookbook.rest.post;
+
+import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+
+import com.sun.jersey.spi.resource.Singleton;
+
+@Path("user/{id}")
+@Singleton
+public class UserService {
+    
+    private Map<Integer, User> userDatabase;
+    
+    //create fake user database to keep example simple
+    public UserService() {
+        userDatabase = new HashMap<Integer, User>();
+    }
+        
+    @POST
+    @Consumes("application/xml")
+    public Response postUser(User user) {
+        System.out.println("Post User.");
+        
+        //save to database here...
+        userDatabase.put(user.getId(), user);
+        System.out.println("Posted user: " + user);
+        
+        URI createdUri = UriBuilder.fromPath("user/" + 
+             user.getId()).build(user);
+        
+        System.out.println("post: createdUri: " + createdUri);
+        
+        //return a 201 'created' status
+        return Response.created(createdUri).build();
+    }
+
+    @GET
+    public Response getUser(@PathParam("id") int id) {
+        System.out.println("Get User.");
+        
+        //get from database...
+        User user = userDatabase.get(id);
+        
+        Response.ResponseBuilder responseBuilder =                    
+        Response.ok(user).entity(user);    
+        Response response = responseBuilder.build();
+
+        System.out.println("get: Found User: " + user);
+        return response;
+    }    
+}
+
+    
+    
+====================================
+Example: User Entity class
+
+package com.soacookbook.rest.post;
+
+import javax.xml.bind.annotation.XmlRootElement;
+
+@XmlRootElement
+public class User {
+    private int id;
+    private String username;
+    
+    public int getId() {
+        return id;
+    }
+    public void setId(int id) {
+        this.id = id;
+    }
+    public String getUsername() {
+        return username;
+    }
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    @Override
+    public String toString() {
+        return "[ID=" + id + ". Username=" + username + "]";
+    }
+    
+}
+    
+    
+====================================
+Example: Post User Client
+
+package com.soacookbook.rest.post;
+
+import java.io.IOException;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.methods.PostMethod;
+
+/**
+ * Invokes the User service to add a resource and then 
+ * retrieve it to prove it worked.
+ */
+public class UserClient {
+    private static String SERVICE_URL = 
+        "http://localhost:8080/restexamples/resources/user/";
+    
+    public static void main(String... args) {
+        System.out.println("Creating new user.");
+        
+        createUser(777, "eben");
+        getUser(777);
+        
+        System.out.println("All done.");
+    }
+    
+
+    private static void createUser(int id, String username) {
+        HttpClient client = new HttpClient();
+        PostMethod post = new PostMethod(SERVICE_URL + id);
+        
+        String userXml = "<?xml version='1.0' encoding='UTF-8' ?>" +
+                "<user>" +
+                "<id>" + id + "</id>" + 
+                "<username>" + username + "</username>" +
+                "</user>";
+        post.setRequestBody(userXml);
+        
+        try {
+            int httpStatus = client.executeMethod(post);
+            
+            if (HttpStatus.SC_OK == httpStatus) {
+                String xmlResponse = post.getResponseBodyAsString();
+            }
+            
+        } catch (HttpException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //clean up
+            post.releaseConnection();
+        }
+    }
+    
+    private static void getUser(int id) {
+        HttpClient client = new HttpClient();
+        GetMethod get = new GetMethod(SERVICE_URL + id);
+        get.setRequestHeader("Accept", "text/xml");
+        
+        try {
+            int httpStatus = client.executeMethod(get);
+            
+            if (HttpStatus.SC_OK == httpStatus) {
+                String xmlResponse = get.getResponseBodyAsString();
+                
+                System.out.println("Xml User Response: " + 
+                        xmlResponse);
+            }
+            
+        } catch (HttpException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //clean up
+            get.releaseConnection();
+        }
+    }
+}
+    
+    
+====================================
+Creating new user.
+Xml User Response: 
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<user><id>777</id><username>eben</username></user>
+All done.
+    
+    
+====================================
+Example: User.java is the Business Entity the Form Creates
+
+package com.soacookbook.rest.forms;
+
+import java.util.Date;
+
+/**
+ * A business entity created by form input.
+ */
+public class User {
+
+    private String id;
+    private String name;
+    private Date createdDate;
+
+    //getters and setters omitted...
+}
+    
+    
+====================================
+Example: A Mock Database for Saving Users
+
+package com.soacookbook.rest.forms;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Mocks a database. When users are created by the form, they
+ * are stored here for later retrieval.
+ */
+public class Database {
+    static Map<String, User> users = new HashMap<String, User>();
+}
+    
+    
+====================================
+Example: The FormsService Class Represents the User in a Form, in a
+        List, and in Detail.
+
+package com.soacookbook.rest.forms;
+
+import java.net.URI;
+import java.util.Date;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.FormParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
+
+/**
+ * REST service produces a form for users to provide input,
+ * reads the data from the form, creates a user, and returns
+ * navigation control. Allows viewing all users.
+ * 
+ * Shows using @FormParam, Response variations, URI building, 
+ * and putting together a complete application.
+ * 
+ * 'Forms' shouldn't be part of the path probably; I only use 
+ * it here for the book example to keep demos clear.
+ */
+@Path("/forms/user")
+@Produces("text/html") 
+public class FormsService {
+    
+    //no user selected, so present form to create one
+    @GET
+    public Response create() {
+                
+        return Response.ok(NEW_USER_FORM_HTML).build();
+    }
+    
+    //get form data and create and save user
+    @POST
+    @Consumes("application/x-www-form-urlencoded")
+    @Produces("text/html")
+    public Response doCreate(
+            @FormParam("id") String id, 
+            @FormParam("fname") String fname, 
+            @Context UriInfo uriInfo) {  
+        
+        //add user to database
+        User user = new User();
+        user.setId(id);
+        user.setName(fname);
+        user.setCreatedDate(new Date());
+        Database.users.put(id, user);
+        
+        //create URI here with entity response
+        URI createdUri = 
+                UriBuilder.fromUri(
+                uriInfo.getRequestUri().toString())
+                .path("{a}").build(user.getId());
+        
+        System.out.println("Created URI: " + createdUri);
+        
+        //Set the Location header and indicate 201 (Created) response
+        //Setting the entity in the response returns 
+        //the object that was created, by first running it through
+        //the writer implementation.
+        Response response = Response.created(createdUri)
+                .entity(user)
+                .location(createdUri)
+                .build();
+        
+        return response;
+    }
+        
+    @GET
+    @Path("/{id}")
+    public Response viewOne(@PathParam("id") String id) {
+        User u = Database.users.get(id);
+        
+        StringBuilder sb = new StringBuilder("<html><body>");
+        
+        sb.append("<h1>View User Details</h1>");
+        
+        sb.append("User ID: ").append(u.getId()).append("<br/>");
+        sb.append("Name: ").append(u.getName()).append("<br/>");
+        sb.append(String.format("Created On: %1$tm.%1$te.%1$tY", 
+              u.getCreatedDate()) );   
+        
+        sb.append("</body></html>");
+        
+        Response response = Response.ok(sb.toString()).build();
+        
+        System.out.println("Built response.");
+        
+        return response;
+    }
+    
+    private static String NEW_USER_FORM_HTML = 
+         new StringBuilder("<html><body>")
+        .append("<h1>Create User</h1>")    
+        .append("<form name='userForm' method='POST' action=''>")
+        .append("ID: <input type='text' name='id' size='3' />")
+        .append("<br/>")
+        .append("Name: <input type='text' name='fname' />")
+        .append("<br/>")
+        .append("<input type='submit' name='submit' value='Create'/>")
+        .append("</form>")       
+        .append("</body></html>").toString(); 
+}
+    
+    
+====================================
+Example: UserHtmlWriter.java Creates an HTML Representation of the User
+        Entity
+
+package com.soacookbook.rest.forms;
+
+import javax.ws.rs.Produces;
+import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.Provider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+
+/**
+ * Creates an HTML representation of a user.
+ */
+@Produces("text/html")
+@Provider
+public class UserHtmlWriter 
+    implements MessageBodyWriter<User> {
+
+    //match type parameter to make sure runtime picks up
+    //this class as writer for User
+    public boolean isWriteable(Class<?> type, Type genericType, 
+      Annotation[ ] annotations, MediaType mediaType) {
+    
+      return User.class.isAssignableFrom(type);
+    }
+
+    public long getSize(User data, 
+      Class<?> type, Type genericType, 
+      Annotation annotations[ ], MediaType mediaType) {
+
+      return -1;
+    }
+
+    /**
+     * Gets executed by putting entity in Response and by
+     * matching that same class to the isWriteable method.
+     */
+    public void writeTo(User user, 
+            Class<?> type, Type genericType, 
+            Annotation[ ] annotations, MediaType mediaType, 
+            MultivaluedMap<String, Object> headers, 
+            OutputStream out) throws IOException {
+    
+        System.out.println("writeTo.");
+                
+        StringBuilder sb = new StringBuilder("<html><body>");
+        
+        sb.append("<h1>User</h1>");       
+        sb.append("User ID: ").append(user.getId()).append("<br/>");
+        sb.append("Name: ").append(user.getName()).append("<br/>");
+        sb.append(String.format("Created On: %1$tm.%1$te.%1$tY", 
+              user.getCreatedDate()) );   
+        
+        sb.append("<h2>View Another User</h2>"); 
+        
+        int count = 0;
+        
+        for (User u : Database.users.values()) {
+            sb.append("<a href='user/").append(u.getId());
+            sb.append("'>");
+            sb.append(u.getName()).append("</a> has ID ");
+            sb.append(u.getId());
+            sb.append("<br />");
+            count++;
+        }
+        sb.append("There are ").append(count).append(" users.");     
+        
+        //will create another GET request
+        sb.append("<br/><br/><a href=''>Create Another User</a>");         
+        sb.append("</body></html>");
+                
+        out.write(sb.toString().getBytes());
+    }
+}
+    
+    
+====================================
+http://localhost:8080/restMaven/resources/forms/user
+
+POST /restMaven/resources/forms/user HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.7) 
+  Gecko/20061011 Fedora/1.5.0.7-7.fc6 Firefox/1.5.0.7
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;
+  q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://localhost:8080/restMaven/resources/forms/user
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 31
+id=88&fname=monty&submit=Create
+
+    
+    
+====================================
+HTTP/1.x 201 Created
+Server: Apache-Coyote/1.1
+Location: http://localhost:8080/restMaven/resources/forms/user/88
+Content-Type: text/html
+Content-Length: 314
+Date: Fri, 07 Nov 2008 23:59:08 GMT
+    
+    
+====================================
+Example: Using a SAAJ client to invoke a RESTful service that talks over
+        HTTP and returns plain XML.
+
+package com.soacookbook.rest.saaj;
+
+import java.net.URI;
+import java.util.Map;
+
+import javax.xml.namespace.QName;
+import javax.xml.transform.Source;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.ws.Dispatch;
+import javax.xml.ws.Service;
+import javax.xml.ws.handler.MessageContext;
+import javax.xml.ws.http.HTTPBinding;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import org.w3c.dom.NodeList;
+
+/**
+ *  Using SAAJ to call a REST service that produces raw XML 
+ *  over HTTP.
+ */
+public class SaajRestClient {
+
+    public static void main(String[] args) throws Exception {
+        new SaajRestClient().call();
+    }
+    
+    public void call() throws Exception {
+        //these can be any value here, as we're not NS qualified
+        //I leave them to illustrate usage in other contexts
+        URI nsURI = new URI("urn:emps");
+        QName serviceName = new QName("empsSvc",nsURI.toString());
+        QName portName = new QName("empsPort",nsURI.toString());
+        Service s = Service.create(serviceName);
+
+        String address = "http://localhost:8080/restexamples/resources/emps/1";
+        
+        s.addPort(portName, HTTPBinding.HTTP_BINDING, address);
+        
+        Dispatch<Source> d = s.createDispatch(portName, 
+                Source.class, Service.Mode.PAYLOAD);
+        
+        Map<String, Object> requestContext = d.getRequestContext();
+        requestContext.put(MessageContext.HTTP_REQUEST_METHOD, "GET");
+        
+        //no body in this example. you would build it here if necessary
+        Source result = d.invoke(null);
+
+        if (result != null) {
+            //got result, so drill down to find data.
+            DOMResult domResult = new DOMResult();
+            Transformer trans = TransformerFactory.newInstance().newTransformer();
+            trans.transform(result, domResult);
+
+            printResult(domResult);
+                
+        } else {
+            System.out.println("No result.");
+        }
+    }
+
+    //use XPath to drill down to data we want
+    private void printResult(DOMResult domResult) 
+        throws XPathExpressionException {
+        
+        String name = "";
+                
+        XPathFactory xpf = XPathFactory.newInstance();
+        XPath xp = xpf.newXPath();
+        NodeList resultList = (NodeList)xp.evaluate(
+                "/employee/name", domResult.getNode(),
+            XPathConstants.NODESET);
+        
+        name = resultList.item(0).getTextContent();
+        
+        System.out.println("Employee Name: " + name);
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<employee>
+    <id>1</id>
+    <name>Bill Gates</name>
+</employee>
+    
+    
+====================================
+@POST
+ public Response addUser(...) {
+   User user = ...
+   URI userId = UriBuilder.fromResource(User.class)...
+   return Response.created(userId).build();
+ }
+    
+    
+====================================
+Example: Meta Data Service uses the Response.ResponseBuilder methods to
+        add meta data to the response.
+
+package com.soacookbook.rest.metadata;
+
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.Locale;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.CacheControl;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
+@Path("/meta") 
+public class MetaDataService {
+
+    @GET
+    public Response get() {
+        CacheControl cacheCtl = new CacheControl();
+        cacheCtl.setMaxAge(500);
+        cacheCtl.setMustRevalidate(true);
+        cacheCtl.setNoStore(true);
+        
+        Calendar cal = new GregorianCalendar();
+        cal.roll(Calendar.YEAR, 1);
+        Date expy = cal.getTime();
+        
+        Response response = Response.noContent()
+        .header("MY_KEY", "MY_VALUE")
+        .cacheControl(cacheCtl)
+        .expires(expy)
+        .language(Locale.ENGLISH)
+        .type(MediaType.TEXT_HTML)
+        .build();
+        
+        return response;
+    }
+}
+    
+    
+====================================
+(Status-Line) HTTP/1.1 204 No Content
+Server: Apache-Coyote/1.1
+Cache-Control: no-store, no-transform, must-revalidate, max-age=500
+Expires: Sun, 08 Nov 2009 16:41:49 GMT
+MY_KEY: MY_VALUE
+Content-Language: en
+Date: Sat, 08 Nov 2008 16:41:49 GMT
+    
+    
+====================================
+Example: OldService.java, which redirects clients to the service at
+        NewService.
+
+package com.soacookbook.rest.response;
+
+import java.net.URI;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+
+/**
+ * Redirects the client from the requested URI to another, 
+ * and maintains the query parameters.
+ */
+@Path("/oldversion")
+public class OldService {
+    
+    private static final String REDIR_PATH = 
+        "http://localhost:8080/restexamples/resources/";
+    
+    private static final String REDIR_SERVICE = "newversion";
+
+    @GET
+    public Response doGet(@QueryParam("user") String user) {
+        
+        System.out.println("In Old doGet.");
+      
+        URI uri = UriBuilder.fromUri(REDIR_PATH).
+        path("{a}").
+        queryParam("user", "{value}").
+        build(REDIR_SERVICE, user);
+
+        Response response = Response.temporaryRedirect(uri).build();
+        
+        System.out.println("Redirecting to " + uri);
+        
+        return response;
+    }
+
+}
+    
+    
+====================================
+Example: NewService.java, which just accepts the redirect from the
+        client and returns the expected result.
+
+package com.soacookbook.rest.response;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.QueryParam;
+
+@Path("/newversion")
+public class NewService {
+    
+    @GET
+    public String doGet(@QueryParam("user") String user) {
+        System.out.println("In New doGet.");
+        return "Hello from New Version, " + user;
+    }
+}
+    
+    
+====================================
+URI uri = UriBuilder.fromResource(NewService.class).build("newversion");
+    
+    
+====================================
+Example: Accessing HTTP Headers using the @Context Annotation
+
+package com.soacookbook.rest.headers;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
+
+@Path("headers")
+public class Headers {
+    
+    @GET
+    public String doGet(@Context HttpHeaders headers) {
+
+        System.out.println("Looking at headers.");
+        
+        //list all incoming headers
+        MultivaluedMap<String,String> map = headers.getRequestHeaders();
+        for (String header : map.keySet()) {
+            System.out.println(header + "=" + map.get(header));
+        }
+
+        return "All done";
+    }
+}
+    
+    
+====================================
+Looking at headers.
+accept-encoding=[gzip, deflate]
+cache-control=[no-cache]
+connection=[Keep-Alive]
+host=[localhost:8080]
+accept-language=[en-us]
+user-agent=[Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727)]
+ua-cpu=[x86]
+accept=[*/*]
+    
+    
+====================================
+Example: Using the @HeaderParam annotation to set a custom response
+          header and get the value of a header
+
+package com.soacookbook.rest.header;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Response;
+
+@Path("/header")
+@Produces("text/html") 
+public class HeaderService {
+ 
+    //set custom header
+    @GET
+    @Path("/home")
+    public Response home() {
+        
+        System.out.println("Header Home page.");
+                
+        String html = "<html><body><a href='step2'>Click</a> " +
+          "to go to the next step.</body></html>";
+        
+        //include header in 200 OK response
+        Response response = Response.ok(html).header(
+                "X-Powered-By", "JAX-RS/Jersey").build();
+        
+        System.out.println("Built response.");
+        
+        return response;
+    }
+    
+    //retrieve standard header
+    @GET
+    @Path("/step2")
+    public String step2(@HeaderParam("User-Agent") String agent) {
+        
+        System.out.println("Header Step 2.");
+        
+        String html = "";
+        
+        if (agent != null) {
+            System.out.println("Header Value: " + agent);
+        
+            html = "<html><body>Your User-Agent is: " +
+                 agent + "</body></html>";
+        } else {
+            html = "<html><body>Could not find header. :(</body></html>";
+        }
+                        
+        System.out.println("Sending response for step2.");
+        
+        return html;
+    }
+}
+
+    
+    
+====================================
+HTTP/1.x 200 OK
+Server: Apache-Coyote/1.1
+X-Powered-By: JAX-RS/Jersey
+Content-Type: text/html
+Transfer-Encoding: chunked
+Date: Wed, 05 Nov 2008 23:57:59 GMT
+    
+    
+====================================
+Your User-Agent is: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.7) 
+  Gecko/20061011 Fedora/1.5.0.7-7.fc6 Firefox/1.5.0.7
+    
+    
+====================================
+Example: CookieService.java sets and later reads the value of an HTTP
+        cookie
+
+package com.soacookbook.rest.cookie;
+
+import javax.ws.rs.CookieParam;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.NewCookie;
+import javax.ws.rs.core.Response;
+
+@Path("/cookie")
+@Produces("text/html") 
+public class CookieService {
+  
+    //set cookie on home page
+    @GET
+    @Path("/home")
+    public Response home() {
+        
+        System.out.println("Home page.");
+        
+        //create a cookie object
+        NewCookie cookie = new NewCookie("MY_KEY", "MY_VALUE");
+        
+        String html = "<html><body><a href='step2'>Click</a> " +
+            "to go to the next step.</body></html>";
+        
+        //include cookie in 200 OK response
+        Response response = Response.ok(html).cookie(cookie).build();
+        
+        System.out.println("Built response.");
+        
+        return response;
+    }
+    
+    //retrieve cookie previously set
+    @GET
+    @Path("/step2")
+    public String step2(@CookieParam("MY_KEY") Cookie cookie) {
+        
+        System.out.println("Step 2.");
+        
+        String html = "";
+        
+        if (cookie != null) {
+            System.out.println("Cookie Name: " + cookie.getName());
+            System.out.println("Cookie Value: " + cookie.getValue());
+        
+            html = "<html><body>The value in your cookie was: " +
+                 cookie.getValue() + "</body></html>";
+        } else {
+            html = "<html><body>Could not find cookie. :(</body></html>";
+        }
+                        
+        System.out.println("Sending response for step2.");
+        
+        return html;
+    }
+}
+    
+    
+====================================
+http://localhost:8080/restMaven/resources/cookie/home
+GET /restMaven/resources/cookie/home HTTP/1.1
+    
+    
+====================================
+HTTP/1.x 200 OK
+Server: Apache-Coyote/1.1
+Set-Cookie: MY_KEY=MY_VALUE;Version=1
+Content-Type: text/html
+Transfer-Encoding: chunked
+Date: Wed, 05 Nov 2008 21:05:42 GMT
+    
+    
+====================================
+http://localhost:8080/restMaven/resources/cookie/step2
+GET /restMaven/resources/cookie/step2 HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.8.0.7) 
+  Gecko/20061011 Fedora/1.5.0.7-7.fc6 Firefox/1.5.0.7
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;
+  q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Referer: http://localhost:8080/restMaven/resources/cookie/home
+Cookie: MY_KEY=MY_VALUE
+    
+    
+====================================
+Home page.
+Built response.
+Step 2.
+Cookie Name: MY_KEY
+Cookie Value: MY_VALUE
+Sending response for step2.
+    
+    
+====================================
+The value in your cookie was: MY_VALUE
+    
+    
+====================================
+//retrieve cookie using injected HttpHeaders
+@GET
+@Path("/step3")
+public String step3(@Context HttpHeaders headers) {
+        
+    System.out.println("Step 3.");
+      
+    String html = "";
+       
+    if (headers != null) {        
+        html = "<html><body>Headers:<br/>";
+            
+        final Map<String, Cookie> cookies = headers.getCookies();
+        for (String key : cookies.keySet()) {
+            html += "Cookie " + key + "=" + 
+                    cookies.get(key) + "<br>";
+        }
+         
+        html += "</body></html>";
+    } else {
+        html = "<html><body>Could not find cookies. :(</body></html>";
+    }
+                                
+    return html;
+}
+    
+    
+====================================
+<html><body>Headers:<br/>
+Cookie MY_KEY=$Version=0;MY_KEY=MY_VALUE<br>
+</body></html>
+    
+    
+====================================
+Example: Creating an Exception and Setting Your Own HTTP Status.
+
+package com.soacookbook.rest.response;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+
+@Path("statuscode")
+public class CustomStatusCode {
+
+    @GET
+    public Response doGet(){
+        Response.ResponseBuilder responseBuilder =                    
+            Response.status(Response.Status.BAD_REQUEST);            
+        Response response = responseBuilder.build();
+        throw new WebApplicationException(response);
+    }
+}
+    
+    
+====================================
+RuntimeException re = new RuntimeException("My forbidden message...");
+throw new WebApplicationException(re, 403);
+    
+    
+====================================
+@GET
+public Response doGet(){
+   throw new RuntimeException("My forbidden message...");
+}
+    
+    
+====================================
+java.lang.RuntimeException: My forbidden message...
+ com.soacookbook.rest.response.CustomStatusCode.doGet(CustomStatusCode.java:16)
+ sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+...
+    
+    
+====================================
+public class MyException extends WebApplicationException {
+    
+    //creates a custom 404 Not Found exception
+    public MyException() {
+        super(Responses.notFound().build());
+    }
+
+    //msg represents the entity of the 404 response
+    public MyException(String msg) {
+        super(Response.status(Responses.NOT_FOUND).
+                entity(msg).type("text/plain").build());
+    }
+
+}
+    
+    
+====================================
+Example: A service that simply throws a FileNotFoundException in order
+          to demonstrate the exception mapping capability.
+
+package com.soacookbook.rest.except;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
+
+/**
+ * Purposefully throws an exception in order to demonstrate 
+ * the Exception mapping capability.
+ */
+@Path("exception")
+public class ExceptionService {
+    
+    @GET
+    public Response doGet() throws FileNotFoundException {
+        
+        //build entity from file
+        File file = new File("/path/doesnt/exist/file.txt");
+        if( !file.exists() ) {
+            System.out.println("Couln't find file.");
+            
+            throw new FileNotFoundException("My custom message.");
+        }
+        Response response = Response.ok(file).build();
+        
+        System.out.println("Returning exception response.");
+        
+        return response;
+    }
+}
+    
+    
+====================================
+Example: Our FileNotFoundExceptionMapper implementation builds a 404
+          response with a custom message.
+
+package com.soacookbook.rest.except;
+
+import java.io.FileNotFoundException;
+
+import javax.ws.rs.core.Response;
+import javax.ws.rs.ext.ExceptionMapper;
+import javax.ws.rs.ext.Provider;
+
+/**
+ * Maps a FileNotFoundException to a 404 and uses its message 
+ * in the response.
+ */
+@Provider
+public class FileNotFoundExceptionMapper implements
+ExceptionMapper<java.io.FileNotFoundException> {
+
+    public Response toResponse(FileNotFoundException ex) {
+        System.out.println("Returning mapped exception.");
+        
+        return Response.status(404)
+          .entity(ex.getMessage())
+          .type("text/plain")
+          .build();
+    }
+}
+    
+    
+====================================
+<resources base="http://example.com/widgets">
+  <resource>
+    <path_variable>
+    <method id="ItemSearch" name="GET">
+      <request>
+        <query_variable name="Operation" fixed="ItemSearch">
+      </request>
+      <response>
+        <representation mediaType="text/xml"
+          element="aws:ItemSearchResponse" />
+      </response>
+    </method>
+  </resource>
+</resources>
+    
+    
+====================================
+Example: The Product.java class, which is a standard POJO.
+
+package com.soacoobook.rest.order;
+
+public class Product {
+    private String id;
+    private String name;
+    private int qty;
+ 
+    public Product() {
+        System.out.println("Creating empty product.");
+    }
+    
+    public Product(String id) {
+        System.out.println("Creating product: " + id);
+        this.id = id;
+        this.name = "";
+        this.qty = 1;
+    }
+
+//setters and getters left out...
+    
+    @Override
+    public String toString() {
+        return "ID=" + id;
+    }
+}
+    
+    
+====================================
+Example: The OrderResource.java Class, which has both GET and POST
+        methods for the list of Products
+
+package com.soacoobook.rest.order;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Produces;
+import javax.ws.rs.Path;
+
+/**
+ * Collects the products that an inventory manager wants
+ * to order from a vendor.
+ */
+@Path("order")
+public class OrderResource {
+
+    //holds products user adds to order
+    private List<Product> products = new ArrayList<Product>();
+    
+    //constructor
+    public OrderResource() {
+        System.out.println("Constructing OrderResource");
+    }
+    
+    @GET
+    @Produces("text/html")
+    public List<Product> getOrderHtml() {
+        System.out.println("getOrderData. Items: " + products);
+    
+        return products;
+    }
+    
+    @POST
+    @Produces("text/html")
+    public List<Product> addToOrder(List<Product> items) {
+        System.out.println("addToOrder. Items: " + items);
+    
+        products.addAll(items);
+        return products;
+    }
+}
+    
+    
+====================================
+Example: The ProductHtmlFormWriter class produces the HTML Form and
+        table representing this resource.
+
+package com.soacoobook.rest.order;
+
+import javax.ws.rs.Produces;
+import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.Provider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+import java.util.List;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+
+/**
+ * Creates an HTML form representing an order for for a 
+ * supply chain. Users can submit the form back to this resource
+ * to add items. The page shows all items from ordering analysts.
+ */
+@Produces("text/html")
+@Provider
+public class ProductHtmlFormWriter 
+    implements MessageBodyWriter<List<Product>> {
+
+    public boolean isWriteable(Class<?> type, Type genericType, 
+        Annotation[] annotations, MediaType mediaType) {
+    
+        System.out.println("isWriteable");
+        return List.class.isAssignableFrom(type);
+    }
+
+    public long getSize(List<Product> data, 
+        Class<?> type, Type genericType, 
+        Annotation annotations[], MediaType mediaType) {
+
+        System.out.println("Writer.getSize");
+        return -1;
+    }
+
+    /**
+     * Here we create the representation of the order as an 
+     * HTML form. Note that we are dealing with a custom Java
+     * type (List<Product>) directly.
+     * The headers param shows Content-Type=[text/html].
+     */
+    public void writeTo(List<Product> products, 
+            Class<?> type, Type genericType, 
+            Annotation[] annotations, MediaType mediaType, 
+            MultivaluedMap<String, Object> headers, 
+            OutputStream out) throws IOException {
+
+        System.out.println("writeTo");
+        
+        out.write(ORDER_HTML_FORM.getBytes());
+        
+        if (products.isEmpty()) {
+            out.write(ORDER_EMPTY_HEADER.getBytes());           
+        } else {
+            //there are items in order; show table of them
+            out.write(String.format(
+                    ITEMS_HEADER, products.size()).getBytes());
+            
+            for (Product p : products) {
+                out.write("<tr><td>".getBytes());
+                out.write(p.getId().getBytes());
+                out.write("</td><td>".getBytes());
+                out.write(p.getName().getBytes());
+                out.write("</td>".getBytes()); 
+                out.write("<td>".getBytes());
+                out.write(Integer.toString(p.getQty()).getBytes());
+                out.write("</td></tr>".getBytes());                                
+            }
+            out.write("</table></form>".getBytes());
+        }
+        out.write(END_HTML.getBytes());
+    }
+    
+    private static String ORDER_HTML_FORM = 
+        "<!DOCTYPE HTML PUBLIC '-//W3C//DTD HTML 4.01 Transitional//EN'>\n" +
+        "<html><head><title>Order Form</title></head>" +
+        "<body><h1>Supply Chain Order Form:</h1>" +
+        "<form name='order' action='order' method='POST'>" +
+        "<table><tr>" +
+        "<td align='left'>ID:</td>" +
+        "<td><input type='text' name='id' value='' size='20' /></td>" +
+        "</tr><tr>" +
+        "<td align='left'>Product Name:</td>\n" +
+        "<td><input type='text' name='name' value='' size='20' /></td>" +
+        "</tr><tr>" +
+        "<td align='left'>Quantity:</td>" +
+        "<td><select name='qty' value='' />" +
+        "<option>1</option><option>2</option>" +
+        "<option>3</option><option>4</option></select>" +
+        "</td></tr>" +
+        "<tr><td></td>" +
+        "<td><input type='submit' value='Add to Order' name='submit' />" +
+        "</td></tr></table>";
+        
+    private static String ORDER_EMPTY_HEADER = 
+        "<p>There are no items in your order.</p>";
+    
+    private static String ITEMS_HEADER = 
+        "<p>There are %d items in your order:</p>" +
+        "<table>" +
+        "<tr><th>ID</th><th>Name</th><th>Quantity</th></tr>";
+    
+    private static String END_HTML = "</body></html>";
+}
+    
+    
+====================================
+Example: The ProductHtmlFormReader class accepts the incoming HTML form
+        data and parses it.
+
+package com.soacoobook.rest.order;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Type;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.MessageBodyReader;
+import javax.ws.rs.ext.Provider;
+
+/**
+ * Accepts the values from the HTML form to create our custom 
+ * Java type, Product.
+ */
+@Consumes("application/x-www-form-urlencoded")
+@Provider
+public class ProductHtmlFormReader implements MessageBodyReader<List<Product>> {
+
+    private static String ENC = "UTF-8";
+
+    //remembers all products
+    private List<Product> cartProducts = new ArrayList<Product>();
+
+    public boolean isReadable(Class<?> type, Type genericType,
+            Annotation[] annotations, MediaType mediaType) {
+
+        System.out.println("isReadable");
+
+        return type.equals(List.class);
+    }
+
+    /*
+     * Returns the list of products represented by this 
+     * application. If this only returned a single product, 
+     * you'd only see the last one added.
+     */
+    public List<Product> readFrom(Class<List<Product>> type, 
+            Type genericType,
+            Annotation[] annotations, MediaType mediaType,
+            MultivaluedMap<String, String> headers, 
+            InputStream inputFormData)
+            throws IOException {
+
+        System.out.println("readFrom");
+
+        // get form data as a string
+        String formData = formToString(inputFormData);
+
+        // access elements from form data
+        Map<String, String> form = formToMap(formData);
+
+        // create a new product based on form data
+        Product product = new Product();
+        product.setId(form.get("id"));
+        product.setName(form.get("name"));
+        product.setQty(Integer.parseInt(form.get("qty")));
+
+        cartProducts.add(product);
+
+        System.out.println("Returning all products.");
+        return cartProducts;
+    }
+
+    /*
+     * Now that we have form data in a single string, parse it
+     * to find the key/value pairs, bust them up, and put them 
+     * in a map.
+     */
+    private Map<String, String> formToMap(String formData) 
+        throws IOException {
+
+        System.out.println("Breaking string of form into map.");
+
+        Map<String, String> form = new HashMap<String, String>();
+        String[] keyValuePairs = formData.split("&");
+        for (int i = 0; i < keyValuePairs.length; i++) {
+            String[] s = keyValuePairs[i].split("=");
+            form.put(URLDecoder.decode(s[0], ENC), 
+                    URLDecoder.decode(s[1], ENC));
+        }
+        return form;
+    }
+
+    /*
+     * Helper converts the form data input stream to a string 
+     * so we can read its values.
+     */
+    private String formToString(InputStream is) throws IOException {
+
+        System.out.println("getting request input as string.");
+
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(is));
+        
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = reader.readLine()) != null) {
+            sb.append(line);
+        }
+
+        is.close();
+        reader.close();
+        return sb.toString();
+    }
+}
+    
+    
+==================

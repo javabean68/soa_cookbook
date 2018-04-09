@@ -1,0 +1,191 @@
+chapter: SOA Governance
+==================
+http://ws.strikeiron.com/USAddressVerification4_0?WSDL 
+    
+    
+====================================
+http://ws.example.com/MyService-1.1.0/Service?WSDL
+    
+    
+====================================
+<tns:deprecated/>
+    
+    
+====================================
+http://example.com/product/123
+    
+    
+====================================
+http://example.com/product/v1.1/123
+    
+    
+====================================
+DB connection was not acquired. 
+(Cannot create JDBC driver of class '' for connect URL 'null')
+- SELECT COUNT(*) FROM PUBLISHER failed (null)
+    
+    
+====================================
+/opt/tomcat-6.0.16/webapps/juddi/WEB-INF/classes/log4j.properties
+    
+    
+====================================
+log4j.appender.LOGFILE.File=/opt/tomcat-6.0.16/logs/juddi.log
+    
+    
+====================================
+juddi.jdbcDriver=com.mysql.jdbc.Driver
+juddi.jdbcUrl=jdbc:mysql://localhost/juddiDB
+juddi.jdbcUsername=juddi
+juddi.jdbcPassword=juddi
+    
+    
+====================================
+$ jar -xvf juddi-2.0rc5.jar juddi-sql
+    
+    
+====================================
+$ /etc/rc.d/init.d/mysqld restart
+
+    
+    
+====================================
+INSERT INTO PUBLISHER (PUBLISHER_ID,PUBLISHER_NAME,
+  EMAIL_ADDRESS,IS_ENABLED,IS_ADMIN)
+VALUES ('eben','Eben Hewitt','eben@example.com',
+  'true','true');
+    
+    
+====================================
+DROP DATABASE IF EXISTS juddiDB;
+CREATE DATABASE juddiDB;
+
+GRANT ALL ON juddiDB.* TO juddi@'%' IDENTIFIED BY 'juddi';
+GRANT ALL ON juddiDB.* TO juddi@'localhost' IDENTIFIED BY 'juddi';
+
+USE juddiDB;
+    
+    
+====================================
+$ mysql -h localhost 
+ -u root -p < /home/ehewitt/mysql/create-juddi-db.sql
+    
+    
+====================================
+$ mysql -u juddi -p
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 50
+Server version: 5.0.22
+
+Type 'help;' or '\h' for help. Type '\c' to clear the buffer.
+
+mysql> use juddiDB; select * from PUBLISHER;
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<Context>
+<Resource name="jdbc/juddiDB" auth="Container" 
+  type="javax.sql.DataSource"
+  username="juddi" password="juddi" 
+  driverClassName="com.mysql.jdbc.Driver"
+  url="jdbc:mysql://localhost:3306/juddiDB?autoReconnect=true"
+  maxActive="100" maxIdle="30" maxWait="10000"
+  />
+</Context>
+    
+    
+====================================
+$ ./shutdown.sh
+$ ./startup.sh
+$ tail -n1000 -f ../logs/catalina.out 
+
+    
+    
+====================================
+Example: Querying a jUDDI Registry with JAX-R
+
+package com.soacookbook.scout;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Properties;
+import javax.xml.registry.*;
+import javax.xml.registry.infomodel.*;
+
+public class Query {
+
+    private static String INQURY_URI =
+            "http://localhost:8080/juddi/inquiry";
+    private static String PUBLISH_URI =
+            "http://localhost:8080/juddi/publish";
+    
+    private static String OREILLY = "O'Reilly Media";
+
+    public static void main(String[] args) throws Exception {
+        getVersion();
+        
+        queryOrgs();
+    }
+    
+    public static void queryOrgs() throws Exception {
+        Connection conn = createConnection();
+        RegistryService registry = conn.getRegistryService();
+        BusinessQueryManager query = 
+                registry.getBusinessQueryManager();
+        
+        List<String> orgs = new ArrayList<String>();
+        orgs.add("O'Reilly Media");
+        
+        BulkResponse response =  
+            query.findOrganizations(null, 
+                orgs, null, null, null, null);
+        
+        @SuppressWarnings("unchecked")
+        Collection<Organization> data = response.getCollection();
+        
+        System.out.print("Response Size: " + data.size());
+        for (Organization org : data) {
+            System.out.print("Org: " + org.getName());
+        }
+    }
+
+    public static void getVersion() throws Exception {
+        Connection conn = createConnection();
+        RegistryService registry = conn.getRegistryService();
+        CapabilityProfile profile = registry.getCapabilityProfile();
+        String version = profile.getVersion();
+        
+        System.out.print("Version: " + version);
+    }
+    
+    public static Connection createConnection() {
+        Connection connection = null;
+        try {
+            Properties props = new Properties();
+            props.setProperty("javax.xml.registry.queryManagerURL", 
+                    INQURY_URI);
+            props.setProperty("javax.xml.registry.lifeCycleManagerURL", 
+                    PUBLISH_URI);
+
+            System.setProperty("javax.xml.registry.ConnectionFactoryClass", 
+                    "com.sun.xml.registry.uddi.ConnectionFactoryImpl");
+
+            ConnectionFactory factory = ConnectionFactory.newInstance();
+            factory.setProperties(props);
+            connection = factory.createConnection();          
+
+        } catch (JAXRException ex) {
+            ex.printStackTrace();
+        }
+        
+        return connection;
+    }
+
+}
+
+    
+    
+==================

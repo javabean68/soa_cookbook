@@ -1,0 +1,3 @@
+<?xml version="1.0"?><!--Powered by StAX--><book xmlns="http://ns.example.com/books" xmlns:b="http://ns.example.com/books" sku="345_iui">
+    <b:title>White Noise</b:title>
+</book>

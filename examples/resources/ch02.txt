@@ -1,0 +1,1228 @@
+chapter: XML Schema and the SOA Data Model
+==================
+Example: Book.xsd Using Russian Doll Schema Design Pattern
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://ns.soacookbook.com/russiandoll"
+           xmlns:tns="http://ns.soacookbook.com/russiandoll"
+           elementFormDefault="unqualified">
+<xsd:annotation>
+    <xsd:documentation>
+      Book schema as Russian Doll design.
+    </xsd:documentation>
+</xsd:annotation>
+<xsd:element name="book">
+    <xsd:complexType> 
+        <xsd:sequence> 
+            <xsd:element name="title" type="xsd:string"/> 
+            <xsd:element name="price" type="xsd:decimal"/>
+            <xsd:element name="category" type="xsd:NCName"/>
+            <xsd:choice>
+                <xsd:element name="author" type="xsd:string"/>
+                <xsd:element name="authors">
+                    <xsd:complexType> 
+                        <xsd:sequence> 
+                            <xsd:element name="author" 
+                                type="xsd:string" 
+                                maxOccurs="unbounded"/>
+                        </xsd:sequence> 
+                    </xsd:complexType>
+                </xsd:element>
+            </xsd:choice>
+        </xsd:sequence> 
+    </xsd:complexType> 
+</xsd:element>
+</xsd:schema>
+    
+    
+====================================
+Example: Book.xsd Using Salami Slice Schema Design Pattern
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://ns.soacookbook.com/salami"
+           xmlns:tns="http://ns.soacookbook.com/salami"
+           elementFormDefault="qualified">
+    <xsd:annotation>
+      <xsd:documentation>
+          Book schema as Salami Slice design.
+      </xsd:documentation>
+    </xsd:annotation>
+    <xsd:element name="book">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element ref="tns:title" />
+                <xsd:element ref="tns:author" />
+                <xsd:element ref="tns:category" />
+                <xsd:element ref="tns:price" />
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    
+    <xsd:element name="title"/>
+    <xsd:element name="price"/>
+    <xsd:element name="category"/>
+    <xsd:element name="author"/>
+</xsd:schema>
+    
+    
+====================================
+Example: Book Schema Using Venetian Blind Design Pattern
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+       targetNamespace="http://ns.soacookbook.com/venetianblind"
+       xmlns:tns="http://ns.soacookbook.com/venetianblind"
+       elementFormDefault="unqualified"
+       attributeFormDefault="unqualified">
+<xsd:annotation>
+  <xsd:documentation>
+      Book schema as Venetian Blind design.
+  </xsd:documentation>
+</xsd:annotation>
+
+<!-- Single global root element exposed -->
+<xsd:element name="book" type="tns:BookType" />
+
+<!-- The root is given a type that is defined here,
+     using all externally defined elements.-->
+<xsd:complexType name="BookType">
+    <xsd:sequence>
+        <xsd:element name="title" type="tns:TitleType"/>
+        <xsd:element name="author" type="tns:AuthorType"/>
+        <xsd:element name="category" type="tns:CategoryType"/>
+        <xsd:element name="price" type="tns:PriceType" />
+    </xsd:sequence>
+</xsd:complexType>
+
+<!-- Each type used by the global root is defined below, 
+     and are potentially available for reuse depending on 
+     the value of the 'elementFormDefault' switch 
+     (use 'qualified' to expose, 'unqualified' to hide) -->
+<xsd:simpleType name="TitleType">
+    <xsd:restriction base="xsd:string">
+        <xsd:minLength value="1"/> 
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="AuthorType">
+    <xsd:restriction base="xsd:string">
+        <xsd:minLength value="1"/> 
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="CategoryType">
+    <xsd:restriction base="xsd:string">
+        <xsd:enumeration value="LITERATURE"/> 
+        <xsd:enumeration value="PHILOSOPHY"/> 
+        <xsd:enumeration value="PROGRAMMING"/>
+    </xsd:restriction>
+</xsd:simpleType>
+
+<xsd:simpleType name="PriceType">
+    <xsd:restriction base="xsd:float" />
+</xsd:simpleType>
+
+</xsd:schema>
+    
+    
+====================================
+Example: Chameleon Customer
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            elementFormDefault="qualified">
+                
+<!-- Defined without namespace --> 
+<xsd:complexType name="CustomerType">
+    <xsd:sequence>
+       <xsd:element name="name" type="xsd:string"/>
+    </xsd:sequence>
+</xsd:complexType>
+    
+</xsd:schema>
+    
+    
+====================================
+Example: Master Invoice Schema Namespace-Coerces the Chameleon
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:Invoice"
+            xmlns="urn:Invoice"
+            elementFormDefault="qualified">
+    
+<xsd:include schemaLocation="CustomerChameleon.xsd"/>
+    
+<!-- Invoice has a Product and a Customer -->
+<xsd:element name="Invoice">
+    <xsd:complexType>
+        <xsd:sequence>
+
+            <!-- Define product here -->
+            <xsd:element name="product">
+             <xsd:complexType>
+                <xsd:sequence>
+                   <xsd:element name="name" type="xsd:string"/>
+                   <xsd:element name="sku" type="xsd:string"/>
+                </xsd:sequence>
+            </xsd:complexType>
+            </xsd:element>
+            
+            <!-- Pull from Chameleon -->
+            <xsd:element name="customer" type="CustomerType" 
+               minOccurs="1" maxOccurs="1" />
+        </xsd:sequence>
+    </xsd:complexType>
+</xsd:element>
+
+</xsd:schema>
+    
+    
+====================================
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  version="1.0.0">
+    
+    
+====================================
+<customer
+  xmlns="http://www.soacookbook.com/Customer"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.soacookbook.com/Customer
+  http://www.soacookbook.com/Customer-v1.0.0.xsd">
+    
+    
+====================================
+<definitions name="MyService"
+   targetNamespace="http://ns.soacookbook.com/sales/v2009Q1"
+   xmlns="http://schemas.xmlsoap.org/wsdl/"
+   xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+   xmlns:tns="http://www.soacookbook.com/sales/v2009Q1"
+   xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    
+    
+====================================
+<xs:element name="name">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+       <xs:minLength value="2" />
+       <xs:maxLength value="30" />
+       <xs:pattern value="[A-Za-z\-. ']{2,30}" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xs:element name="usPhone">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="\(?\d{3}\)?[ \-\.]?\d{3}[ \-\.]?\d{4}" />
+        <xs:minLength value="10" />
+        <xs:maxLength value="16" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xs:element name="email">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="(\w+\.)*\w+@(\w+\.)+[A-Za-z]{2,9}" />
+        <xs:minLength value="6" />
+        <xs:maxLength value="255" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xs:element name="usZip">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="\d{5}(-\d{4})?" />
+        <xs:minLength value="5" />
+        <xs:maxLength value="10" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xsd:simpleType name="SSN">
+    <xsd:restriction base="xsd:string">
+        <xsd:pattern value="\d{3}(-)?\d{2}(-)?\d{4}" />
+        <xsd:minLength value="9" />
+        <xsd:maxLength value="11" />
+    </xsd:restriction>
+</xsd:simpleType>
+    
+    
+====================================
+<xs:element name="caPostalCode">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="[ABCDEGHJKLMNPRSTVXY]\d[A-Z] \d[A-Z]\d" />
+        <xs:minLength value="7" />
+        <xs:maxLength value="7" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xsd:simpleType name="CAProvince">
+    <xsd:restriction base="xsd:string">
+        <xsd:length value="2" />
+        <xsd:enumeration value="AB" />
+        <xsd:enumeration value="BC" />
+        <xsd:enumeration value="MB" />
+        <xsd:enumeration value="NB" />
+        <xsd:enumeration value="NL" />
+        <xsd:enumeration value="NS" />
+        <xsd:enumeration value="NT" />
+        <xsd:enumeration value="NU" />
+        <xsd:enumeration value="ON" />
+        <xsd:enumeration value="PE" />
+        <xsd:enumeration value="QC" />
+        <xsd:enumeration value="SK" />
+        <xsd:enumeration value="YT" />
+    </xsd:restriction>
+</xsd:simpleType>
+    
+    
+====================================
+<xs:element name="url">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="(https?://)?[-\w.]+(:\d{2,5})?(/([\w/_.]*)?)?" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+<xs:element name="ip">     
+<xs:simpleType>
+    <xs:restriction base="xs:string">
+        <xs:pattern value="(((\d{0,2})|(1(\d){0,2})|(2[0-4]\d)|(25[0-5]))\.){3}((\d{0,2})|(1(\d){0,2})|(2[0-4]\d)|(25[0-5]))" />
+    </xs:restriction>
+</xs:simpleType>
+</xs:element>
+    
+    
+====================================
+Example: DomValidator.java
+
+package com.sc.ch02.schema;
+
+import static java.lang.System.out;
+
+import java.io.IOException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.helpers.DefaultHandler;
+
+/**
+ * Validates an XML document according to a schema.
+ */
+public class DomValidator {
+
+    private static final String SCHEMA_LANG_PROP = 
+        "http://java.sun.com/xml/jaxp/properties/schemaLanguage";
+    private static final String XML_SCHEMA = 
+        "http://www.w3.org/2001/XMLSchema";
+    
+    private static final String SCHEMA_SOURCE_PROP = 
+        "http://java.sun.com/xml/jaxp/properties/schemaSource";
+    
+    //run the example
+    public static void main(String[] args) {
+
+        String schema = "C:/repository/books/SOACookbook/code/" +
+                "soacookbook/bin/ch02/Catalog.xsd";
+        String xmlDoc = "bin/ch02/Catalog.xml";
+        
+        boolean valid = validate(schema, xmlDoc);
+        
+        out.print("Valid? " + valid);
+    }
+    
+    //do the work
+    private static boolean validate(String schema, String xmlDoc) {
+        DocumentBuilder builder = createDocumentBuilder(schema);
+        
+        ValidationHandler handler = new ValidationHandler();
+        builder.setErrorHandler(handler);
+        
+        try {
+            builder.parse(xmlDoc);
+                        
+        } catch (SAXException se) {
+            out.println("Validation Error: " + se.getMessage());
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
+        
+        return handler.isValid();
+    }
+
+    /**
+     * Convenience method sets up the validating factory and 
+     * creates the builder.
+     */
+    private static DocumentBuilder createDocumentBuilder(
+            String schema) {
+        
+        DocumentBuilderFactory factory = 
+            DocumentBuilderFactory.newInstance();
+        
+        factory.setNamespaceAware(true);
+        factory.setValidating(true);
+        factory.setAttribute(SCHEMA_LANG_PROP, XML_SCHEMA);
+        factory.setAttribute(SCHEMA_SOURCE_PROP, schema);
+        
+        DocumentBuilder builder = null;
+        try {
+            builder = factory.newDocumentBuilder();
+        } catch (ParserConfigurationException pce) {
+            pce.printStackTrace();
+        }
+        
+        return builder;
+    }
+}
+
+/**
+ * This class gets notified by the parser in the event of a 
+ * problem. 
+ */
+class ValidationHandler extends DefaultHandler {
+    private boolean valid = true;
+    private SAXException se;
+    
+    /**
+     * The default implementation does nothing. 
+     */
+    @Override
+    public void error(SAXParseException se) throws SAXException {
+        this.se = se;
+        valid = false;
+        throw se;
+    }
+    
+    /**
+     * The default implementation does nothing. 
+     */
+    @Override
+    public void fatalError(SAXParseException se) 
+        throws SAXException {
+        
+        this.se = se;
+        valid = false;
+        throw se;
+    }
+    
+    public boolean isValid() {
+        return valid;
+    }
+}
+    
+    
+====================================
+Valid? true
+    
+    
+====================================
+Validation Error: cvc-elt.1: Cannot find the declaration of element 'dude'.
+Valid? false
+    
+    
+====================================
+<c:customer cid="99" xmlns:c="urn:ns:soacookbook:customer">
+  <gen:name xmlns:gen="urn:ns:soacookbook:general">
+    Indiana Jones
+  </gen:name>
+  <a:address xmlns:a="urn:ns:soacookbook:address">
+    <a:street>1212 Some Street</a:street>
+    <a:city>Washington,DC</a:city>
+    <a:state>VA</a:state>
+  </a:address>
+</c:customer>
+    
+    
+====================================
+...
+
+//create a string path to each schema needed for Customer.xml
+
+String schemaAddress = ROOT + "a.xsd";
+String schemaGeneral = ROOT + "gen.xsd";
+String schemaCustomer = ROOT + "Customer.xsd";
+        
+String[] schemas = 
+    {schemaAddress, schemaGeneral, schemaCustomer};
+
+//change this method to accept vararg schema
+private static DocumentBuilder createDocumentBuilder(
+            String...schemas) {
+
+...
+
+//business as usual
+factory.setAttribute(SCHEMA_SOURCE_PROP, schemas);
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://ns.soacookbook.com/cart"
+    xmlns:tns="http://ns.soacookbook.com/cart"
+    elementFormDefault="qualified">
+    
+    <xs:element name="usPhone" type="tns:USPhoneType" />
+    
+    <xs:simpleType name="USPhoneType">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="\(?\d{3}\)?[ \-\.]?\d{3}[ \-\.]?\d{4}"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+</xs:schema>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<cart:usPhone xmlns:cart="http://ns.soacookbook.com/cart"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://ns.soacookbook.com/cart 
+   Cart.xsd">(888) 999-0101</cart:usPhone>
+    
+    
+====================================
+...
+<xs:restriction base="xs:string">
+    <xs:pattern value="..."/>
+    <xs:minLength value="10"/>
+    <xs:maxLength value="16"/>
+</xs:restriction>
+...
+    
+    
+====================================
+<xs:simpleType name="USState">
+    <xs:restriction base="xs:string">
+        <xs:length value="2" />
+        <xs:enumeration value="AL" />
+        <xs:enumeration value="AK" />
+        <xs:enumeration value="AR" />
+        <xs:enumeration value="AZ" />
+        ...
+    </xsd:restriction>
+</xsd:simpleType>
+    
+    
+====================================
+Example: XML Schema to Bind to a Java Class
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://ns.soacookbook.com/suits"
+            xmlns:tns="http://ns.soacookbook.com/suits"
+            elementFormDefault="qualified">
+                
+<xs:simpleType name="Suit">
+    <xs:restriction base="xs:string">
+        <xs:enumeration value="SPADES" />
+        <xs:enumeration value="HEARTS" />
+        <xs:enumeration value="DIAMONDS" />
+        <xs:enumeration value="CLUBS" />
+    </xs:restriction>
+</xs:simpleType>
+
+</xs:schema>
+    
+    
+====================================
+Example: XML Document Matching the Suit Schema
+
+<?xml version="1.0" encoding="UTF-8"?>
+<s:suit  xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'
+   xmlns:s='http://ns.soacookbook.com/suits'
+   xsi:schemaLocation='http://ns.soacookbook.com/suits Suits.xsd'>HEARTS</s:suit>
+    
+    
+====================================
+> >xjc -verbose -d work/gen src/xml/ch02/Suits.xsd
+    
+    
+====================================
+parsing a schema...
+compiling a schema...
+[INFO] generating code
+
+com\soacookbook\ns\suits\ObjectFactory.java
+com\soacookbook\ns\suits\Suit.java
+
+>
+    
+    
+====================================
+Example: JAXB 2.1 Generated Suit.java Enum
+
+package com.soacookbook.ns.suits;
+
+import javax.xml.bind.annotation.XmlEnum;
+import javax.xml.bind.annotation.XmlType;
+
+/**
+ * <p>Java class for Suit.
+ * 
+ * <p>The following schema fragment specifies the expected content contained within this class.
+ * <p>
+ * <pre>
+ * &lt;simpleType name="Suit">
+ *   &lt;restriction base="{http://www.w3.org/2001/XMLSchema}string">
+ *     &lt;enumeration value="SPADES"/>
+ *     &lt;enumeration value="HEARTS"/>
+ *     &lt;enumeration value="DIAMONDS"/>
+ *     &lt;enumeration value="CLUBS"/>
+ *   &lt;/restriction>
+ * &lt;/simpleType>
+ * </pre>
+ * 
+ */
+@XmlType(name = "Suit", namespace = "http://ns.soacookbook.com/suits")
+@XmlEnum
+public enum Suit {
+
+    SPADES,
+    HEARTS,
+    DIAMONDS,
+    CLUBS;
+
+    public String value() {
+        return name();
+    }
+
+    public static Suit fromValue(String v) {
+        return valueOf(v);
+    }
+}
+    
+    
+====================================
+Example: Catalog Schema Declaration
+
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+        xmlns="http://ns.soacookbook.com/catalog"
+        targetNamespace="http://ns.soacookbook.com/catalog">
+//...
+    
+    
+====================================
+Example: Book Type as Declared in Catalog.xsd
+
+<xsd:complexType name="Book">
+    <xsd:sequence>
+        <xsd:element name="isbn" type="ISBN"/>
+        <xsd:element name="author" type="Author"/>
+        <xsd:element name="title" type="xsd:string"/>
+        <xsd:element name="category" type="Category"/>
+    </xsd:sequence>
+</xsd:complexType>
+    
+    
+====================================
+Example: Book.java Class Generated by JAXB
+
+package com.soacookbook.ns.catalog;
+
+import javax.xml.bind.annotation.*;
+
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "Book", propOrder = {
+    "isbn",
+    "author",
+    "title",
+    "category"
+})
+public class Book {
+    @XmlElement(required = true)
+    protected String isbn;
+    @XmlElement(required = true)
+    protected Author author;
+    @XmlElement(required = true)
+    protected String title;
+    @XmlElement(required = true)
+    protected Category category;
+
+//... getters and setters ommitted
+    
+    
+====================================
+<xsd:simpleType name="Category">
+    <xsd:restriction base="xsd:string">
+        <xsd:enumeration value="COOKING" />
+        <xsd:enumeration value="LITERATURE" />
+        <xsd:enumeration value="PHILOSOPHY" />
+        <xsd:enumeration value="PROGRAMMING" />
+    </xsd:restriction>
+</xsd:simpleType>
+    
+    
+====================================
+@XmlType(name = "Category")
+@XmlEnum
+public enum Category {
+    COOKING,
+    LITERATURE,
+    PHILOSOPHY,
+    PROGRAMMING;
+
+    public String value() {
+        return name();
+    }
+
+    public static Category fromValue(String v) {
+        return valueOf(v);
+    }
+}
+    
+    
+====================================
+Example: XML Schema Containing a Root Element
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="http://ns.soacookbook.com/book"
+            xmlns:tns="http://ns.soacookbook.com/book"
+            elementFormDefault="qualified">
+    
+  <xsd:element name="author">
+
+    <xsd:complexType>
+        <xsd:sequence>
+            <xsd:element name="firstName" type="xsd:string"/>
+            <xsd:element name="lastName" type="xsd:string"/>
+        </xsd:sequence>
+    </xsd:complexType>
+    
+  </xsd:element>
+    
+</xsd:schema>
+    
+    
+====================================
+> xjc -d . AuthorRootType.xsd
+
+    
+    
+====================================
+Example: Author Type Annotated with XMLRootElement
+
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "", propOrder = {
+    "firstName",
+    "lastName"
+})
+@XmlRootElement(name = "author")
+public class Author {
+
+    @XmlElement(required = true)
+    protected String firstName;
+    @XmlElement(required = true)
+    protected String lastName;
+
+//... getters and setter methods ommitted. 
+
+    
+    
+====================================
+> schemagen Product.java
+    
+    
+====================================
+Example: Plain Product.java class with No Annotations
+
+package com.soacookbook.ch02.schemagen;
+
+import java.util.Date;
+
+public class Product {
+    
+    private static final long serialVersionUID = 12345L;
+    
+    private String name;
+    private Date mfrDate;
+    
+    public Product() {
+
+    }
+
+    public Date getMfrDate() {
+        return mfrDate;
+    }
+
+    public void setMfrDate(Date mfrDate) {
+        this.mfrDate = mfrDate;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+}
+    
+    
+====================================
+Example: Schema Generated by schemagen for Product.java
+
+<xs:schema version="1.0" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:complexType name="product">
+    <xs:sequence>
+      <xs:element name="mfrDate" type="xs:dateTime" minOccurs="0"/>
+      <xs:element name="name" type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+    
+    
+====================================
+Example: Product Java Class Annotated for Schema Generation
+
+package com.soacookbook.ch02.schemagen;
+
+import java.util.Date;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
+
+@XmlRootElement(namespace="com.soacookbook.ch02.schemagen", 
+    name="Product2")
+@XmlType(namespace="com.soacookbook.ch02.schemagen")
+public class ProductAnnotated {
+    
+    private static final long serialVersionUID = 12345L;
+    
+    @XmlElement(defaultValue="1.0")
+    static String VERSION = "1.0";
+    
+    private String name;
+    private Date mfrDate;
+    
+    public ProductAnnotated() { }
+
+    //... getters and setters omitted 
+}
+    
+    
+====================================
+Example: Schema File Generated Using JAXB Annotations
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xs:schema version="1.0" 
+    targetNamespace="com.soacookbook.ch02.schemagen"
+    xmlns:tns="com.soacookbook.ch02.schemagen" 
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="Product2" type="tns:productAnnotated"/>
+
+  <xs:complexType name="productAnnotated">
+    <xs:sequence>
+      <xs:element name="VERSION" 
+        type="xs:string" default="1.0" minOccurs="0"/>
+      <xs:element name="mfrDate" 
+        type="xs:dateTime" minOccurs="0"/>
+      <xs:element name="name" 
+        type="xs:string" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+    
+    
+====================================
+Example: Java Program to Generate a Schema at Runtime
+
+package com.soacookbook.ch02.schemagen;
+
+import static java.lang.System.out;
+
+import java.io.File;
+import java.io.IOException;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.SchemaOutputResolver;
+import javax.xml.transform.Result;
+import javax.xml.transform.stream.StreamResult;
+
+/**
+ * Generates a schema from a Java class. 
+ */
+public class SchemaMaker {
+    
+    SchemaOutputResolver resolver;
+    
+    //run the show
+    public static void main(String...arg){
+        try {
+            Class[] classes = {ProductAnnotated.class};
+
+            new SchemaMaker().execute(classes);
+        } catch (JAXBException ex) {
+           ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+    }
+    
+    /**
+     * Creates an instance of SchemaMaker with defaults.
+     */
+    public SchemaMaker() {
+        resolver = new MySchemaOutputResolver(".", "MySchema.xsd");
+    }
+        
+    public void execute(Class...classes) 
+            throws JAXBException, IOException {
+                
+        JAXBContext context = JAXBContext.newInstance(classes);
+        context.generateSchema(resolver);
+        
+        out.println("All done.");
+    }
+}
+
+/**
+ * Extends the resolver.
+ */
+class MySchemaOutputResolver extends SchemaOutputResolver {
+    
+    private File output;
+    
+    public MySchemaOutputResolver(String dir, String fileName){
+        output = new File(dir, fileName);
+    }
+        
+    public Result createOutput(String namespaceUri, 
+            String suggestedFileName) throws IOException {
+        
+        return new StreamResult(output);
+    }
+}
+
+    
+    
+====================================
+sun.app.ant.jar=${glassfish.jars.dir}/sun-appserv-ant.jar
+sun.ws.tools.jar=${glassfish.jars.dir}/webservices-tools.jar
+sun.ws.rt.jar=${glassfish.jars.dir}/jaxws-rt.jar
+xjc.task.path=${sun.app.ant.jar}${path.separator}${sun.ws.tools.jar}${path.separator}${sun.ws.rt.jar}
+
+    
+    
+====================================
+<taskdef name="xjc" 
+    classname="com.sun.tools.xjc.XJCTask">
+    <classpath path="${xjc.task.path}"/>
+</taskdef>
+    
+    
+====================================
+<target name="schema-to-java">
+    <echo message="-----Generating Java sources from Schema-----" />
+    <xjc destdir="./src/gen">
+    <schema dir="./src/xml/META-INF/wsdl" includes="**/*.schemalet, **/*.xsd"/>
+    </xjc>
+</target>
+    
+    
+====================================
+> java -jar xml-xig-0.1.1.jar "src/xml/META-INF/wsdl/Catalog.xsd" search Catalog.xig
+XIG: Generating Template src/xml/META-INF/wsdl/Catalog.xsd.xig...
+XIG: Instantiating src/xml/META-INF/wsdl/Catalog.xsd.xml...
+    
+    
+====================================
+<search>
+  <firstName>?{string}</firstName>
+  <lastName>?{string}</lastName>
+</search>
+    
+    
+====================================
+<s:search xmlns:s="http://ns.soacookbook.com/catalog"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://ns.soacookbook.com/catalog Catalog.xsd">
+  <firstName>James</firstName>
+  <lastName>Joyce</lastName>
+</s:search>
+    
+    
+====================================
+<xig:template document='search' schema='src/xml/META-INF/wsdl/Catalog.xsd' xmlns:xds='http://xml-xsd.sourceforge.net/schema/XmlXsd-0.1'>
+  <search>
+    <firstName>${xs:string}</firstName>
+    <lastName>${xs:string}</lastName>
+  </search>
+  <xig:generate>
+    <!-- Generate instance documents from template document above -->
+    <loop count='10'>
+    </loop>
+  </xig:generate>
+</xig:template>
+    
+    
+====================================
+Example: Customizing JAXB with a Schemalet File
+
+<xs:schema elementFormDefault="qualified" version="1.0" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" 
+  jaxb:version="2.0" 
+  targetNamespace="urn:schemalet:calendar">
+
+  <xs:annotation>
+    <xs:appinfo>
+
+    <jaxb:globalBindings mapSimpleTypeDef="false" 
+          choiceContentProperty="true">
+      <jaxb:javaType name="java.util.Date" xmlType="xs:date"
+        parseMethod="javax.xml.bind.DatatypeConverter.parseDate"
+        printMethod="javax.xml.bind.DatatypeConverter.printDate"/>
+
+      <jaxb:javaType name="java.util.Date" xmlType="xs:dateTime"
+        parseMethod="javax.xml.bind.DatatypeConverter.parseDate"
+        printMethod="javax.xml.bind.DatatypeConverter.printDate"/>
+
+    </jaxb:globalBindings>
+  </xs:appinfo>
+  </xs:annotation>
+
+  //...rest of schema here
+</xs:schema>
+    
+    
+====================================
+printMethod="javax.xml.bind.DatatypeConverter.printShort" 
+parseMethod="javax.xml.bind.DatatypeConverter.parseShort"
+    
+    
+====================================
+Example: External File for XML Schema Binding Customization
+
+<!-- Changes dates and dateTimes to java.util.Date -->
+<jaxb:bindings version="2.0" 
+  xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  jaxb:extensionBindingPrefixes="xjc">
+  
+  <jaxb:globalBindings mapSimpleTypeDef="false" 
+      choiceContentProperty="true">
+  <jaxb:javaType name="java.util.Date" xmlType="xs:date"
+    parseMethod="javax.xml.bind.DatatypeConverter.parseDate"
+    printMethod="javax.xml.bind.DatatypeConverter.printDate"/>
+
+  <jaxb:javaType name="java.util.Date" xmlType="xs:dateTime"
+    parseMethod="javax.xml.bind.DatatypeConverter.parseDate"
+    printMethod="javax.xml.bind.DatatypeConverter.printDate"/>
+
+ </jaxb:globalBindings>
+</jaxb:bindings>
+    
+    
+====================================
+> xjc -d . LibraryBook.xsd -b .
+    
+    
+====================================
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "", propOrder = {
+    "title",
+    "dueDate"
+})
+@XmlRootElement(name = "book")
+public class Book {
+
+    @XmlElement(required = true)
+    protected String title;
+    @XmlElement(required = true, type = String.class)
+    @XmlJavaTypeAdapter(Adapter2 .class)
+    @XmlSchemaType(name = "date")
+    protected Date dueDate;
+
+    public Date getDueDate() {
+        return dueDate;
+    }
+
+    public void setDueDate(Date value) {
+        this.dueDate = value;
+    }
+
+/...etc
+}
+    
+    
+====================================
+Example: Validating an XML Instance Against a Schema During
+        Unmarshalling
+
+package com.soacookbook.ch02.jaxb;
+
+import java.io.File;
+import java.io.StringReader;
+import javax.xml.XMLConstants;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.*;
+
+/**
+ * Sets a schema onto the unmarshaller to validate.
+ */
+public class ValidateUnmarshal {
+    private static final String SCHEMA = 
+            "/home/ehewitt/soacookbook/repository/code/catalog/ws/" +
+            "src/xml/ch02/BookVenetianBlind.xsd";
+    
+  public static void main(String...arg) {
+    try {
+
+        //Create context
+        JAXBContext ctx = JAXBContext.newInstance(Book.class);
+        
+        //Create marshaller
+        Unmarshaller um = ctx.createUnmarshaller();
+        
+        //Create instance of schema
+        SchemaFactory factory = 
+                SchemaFactory.newInstance(
+                  XMLConstants.W3C_XML_SCHEMA_NS_URI);
+        
+        //Create factory, add options if necessary
+        Schema schema = factory.newSchema(
+                new StreamSource(new File(SCHEMA)));
+        
+        //This sets us up for validation
+        um.setSchema(schema);
+
+        //Read in the XML from anywhere
+        //In this case it is a complete XML book as string.
+        StringReader sr = new StringReader(getBookXml());
+        
+        //Get XML from object. 
+        //Now that we have a schema set, this throws
+        //MarshalException if XML doesn't match XSD
+        JAXBElement<Book> b = um.unmarshal(
+                new StreamSource(sr), Book.class);
+        
+        //We never get this far with invalid XML
+        //Start working with object
+        Book book = b.getValue();
+        
+        System.console().printf("Title: %s", book.getTitle());
+
+    } catch (JAXBException ex) {
+        ex.printStackTrace();
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+  }
+  
+  //NOTE: THIS XML FAILS VALIDATION!
+  private static String getBookXml(){
+      return "<com.soacookbook.ch02.xstream.Book>" +
+              "<title>On Friendship</title>" +
+              "<price>39.95</price>" +
+              "<author><firstName>Jacques</firstName>" +
+              "<lastName>Derrida</lastName>" +
+              "</author><category>PHILOSOPHY</category>" +
+              "</com.soacookbook.ch02.xstream.Book>";
+  }
+}
+    
+    
+====================================
+javax.xml.bind.UnmarshalException
+ - with linked exception:
+[org.xml.sax.SAXParseException: cvc-elt.1: Cannot find the declaration of element 
+'com.soacookbook.ch02.xstream.Book'.]
+    
+    
+====================================
+//This is valid according to the schema  
+private static String getBookXml(){
+      return "<b:book xmlns:b='http://ns.soacookbook.com/venetianblind'>" +
+              "<title>On Friendship</title>" +
+              "<author>Jacques Derrida</author>" +
+              "<category>PHILOSOPHY</category>" +
+              "<price>39.95</price>" +
+              "</b:book>";
+}
+    
+    
+====================================
+<b:book xmlns:b='http://ns.soacookbook.com/venetianblind' 
+              'xmlns:b='http://ns.soacookbook.com/x'> ...
+    
+    
+====================================
+Example: Custom Validation Handler
+
+class MyHandler implements ValidationEventHandler {
+    public boolean handleEvent(ValidationEvent event) {
+        int severity = event.getSeverity();
+        
+        if (severity == ValidationEvent.WARNING) {
+            String msg = event.getMessage();
+           
+            ValidationEventLocator vel = event.getLocator();
+            int line = vel.getLineNumber();
+                        
+            String warn = "**** WARNING! Msg is %s." +
+                     "See source line %d.";
+            System.console().printf(warn, msg, line);
+            
+            //print warning, but proceed.
+            return true;
+        } else {
+            String err = "**** Got an Error of type %s.";
+            System.console().printf(err,
+                event.getLinkedException().getClass().getName());
+            //ERROR--quit parsing
+            return false;
+        }
+    }
+    
+}
+
+    
+    
+====================================
+        
+        //Create marshaller
+        Unmarshaller um = ctx.createUnmarshaller();
+        
+        //Create instance of schema...
+        
+        //Create instance of our custom handler
+        MyHandler myHandler = new MyHandler();
+
+        //Add it to unmarshaller
+        um.setEventHandler(myHandler);
+//...
+    
+    
+====================================
+**** Got an Error of type org.xml.sax.SAXParseException.javax.xml.bind.UnmarshalException
+ - with linked exception:
+[org.xml.sax.SAXParseException: Attribute "xmlns:b" was already specified for element "b:book".]
+
+    
+    
+==================

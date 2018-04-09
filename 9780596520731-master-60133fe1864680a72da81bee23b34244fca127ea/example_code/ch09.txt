@@ -1,0 +1,956 @@
+chapter: Service Orchestrations with BPEL
+==================
+DEBUG - GeronimoLog.debug(66) | Activated {http://ode/bpel/unit-test}HelloWorld2-1
+DEBUG - GeronimoLog.debug(66) | Rehydrating process {http://ode/bpel/unit-test}HelloWorld2-1
+DEBUG - GeronimoLog.debug(66) | Creating process DAO for {http://ode/bpel/unit-test}HelloWorld2-1 
+(guid=hqejbhcnphr3cqjo1clone)
+INFO - GeronimoLog.info(79) | Registered process {http://ode/bpel/unit-test}HelloWorld2-1.
+INFO - GeronimoLog.info(79) | Deployment of artifact HelloWorld2 successful: 
+[{http://ode/bpel/unit-test}HelloWorld2-1]
+    
+    
+====================================
+<xsd:element name="hello">
+<xsd:complexType>
+<xsd:sequence>
+    <xsd:element form="unqualified" name="TestPart" type="xsd:string"/>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+    
+    
+====================================
+<xsd:element name="helloResponse">
+<xsd:complexType>
+<xsd:sequence>
+    <xsd:element form="unqualified" name="TestPart" type="xsd:string"/>
+</xsd:sequence>
+</xsd:complexType>
+</xsd:element>
+    
+    
+====================================
+<wsdl:service name="helloWorld">
+<wsdl:port name="helloWorldSOAP11port_http" binding="tns:helloWorldSOAP11Binding">
+    <soap:address location="http://localhost:8080/ode/processes/helloWorld"/>
+</wsdl:port>
+<wsdl:port name="helloWorldSOAP12port_http" binding="tns:helloWorldSOAP12Binding">
+    <soap12:address location="http://localhost:8080/ode/processes/helloWorld"/>
+</wsdl:port>
+<wsdl:port name="helloWorldHttpport" binding="tns:helloWorldHttpBinding">
+     <http:address location="http://localhost:8080/ode/processes/helloWorld"/>
+</wsdl:port>
+</wsdl:service>
+    
+    
+====================================
+$ sendsoap http://localhost:8080/ode/processes/helloWorld examples/HelloWorld2/testRequest.soap
+    
+    
+====================================
+$ bin/sendsoap http://localhost:8080/ode/processes/helloWorld examples/Hello
+World2/testRequest.soap
+WARN - 2008-06-14 14:41:04,820 - <org.apache.commons.httpclient.HttpMethodBase> 
+Going to buffer response body of large or unknown size. Using getResponseBodyAsStream 
+instead is recommended.
+<?xml version='1.0' encoding='UTF-8'?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+<soapenv:Body>
+<axis2ns1:helloResponse xmlns:axis2ns1="http://ode/bpel/unit-test.wsdl">
+  <TestPart xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" 
+    xmlns:ns1="http://ode/bpel/unit-test.wsdl">Hello World</TestPart>
+</axis2ns1:helloResponse>
+</soapenv:Body></soapenv:Envelope>
+
+    
+    
+====================================
+Example: Apache ODE's HelloWorld2.bpel
+
+<process name="HelloWorld2"
+    targetNamespace="http://ode/bpel/unit-test" 
+    xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+    xmlns:tns="http://ode/bpel/unit-test"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:test="http://ode/bpel/unit-test.wsdl"
+    queryLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath2.0"
+    expressionLanguage="urn:oasis:names:tc:wsbpel:2.0:sublang:xpath2.0">
+
+  <import location="HelloWorld2.wsdl"
+     namespace="http://ode/bpel/unit-test.wsdl"
+     importType="http://schemas.xmlsoap.org/wsdl/" />
+
+   <partnerLinks>
+      <partnerLink name="helloPartnerLink" 
+         partnerLinkType="test:HelloPartnerLinkType" 
+         myRole="me" />
+   </partnerLinks>
+    
+   <variables>
+     <variable name="myVar" messageType="test:HelloMessage"/>
+     <variable name="tmpVar" type="xsd:string"/>
+   </variables>
+
+   <sequence>
+       <receive
+          name="start"
+          partnerLink="helloPartnerLink"
+          portType="test:HelloPortType"
+          operation="hello"
+          variable="myVar"
+          createInstance="yes"/>
+
+      <assign name="assign1">
+          <copy>
+              <from variable="myVar" part="TestPart"/>
+              <to variable="tmpVar"/>
+          </copy>
+          <copy>
+              <from>concat($tmpVar,' World')</from>
+              <to variable="myVar" part="TestPart"/>
+          </copy>
+      </assign>
+       <reply name="end"  
+              partnerLink="helloPartnerLink"
+              portType="test:HelloPortType" 
+              operation="hello"
+              variable="myVar"/>
+   </sequence>
+</process>
+
+    
+    
+====================================
+<import location="HelloWorld2.wsdl"
+    namespace="http://ode/bpel/unit-test.wsdl"
+    importType="http://schemas.xmlsoap.org/wsdl/" />
+    
+    
+====================================
+<plnk:partnerLinkType name="HelloPartnerLinkType">
+     <plnk:role name="me" portType="tns:HelloPortType"/>
+     <plnk:role name="you" portType="tns:HelloPortType"/>
+</plnk:partnerLinkType>
+    
+    
+====================================
+<receive
+   name="start"
+   partnerLink="helloPartnerLink"
+   portType="test:HelloPortType"
+   operation="hello"
+   variable="myVar"
+   createInstance="yes"/>
+    
+    
+====================================
+Example: Customer Lookup Service Implementation,
+          CustomerWS.java
+
+package com.soacookbook;
+
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+
+package com.soacookbook;
+
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+
+/**
+ * This is a dumb service that returns the zip code
+ * for a given customer.
+ */
+@WebService(name="CustomerLookupService", 
+    serviceName="CustomerLookupService",
+    targetNamespace="urn:com:soacookbook", 
+    portName="customerLookupPort")
+public class CustomerWS {
+    
+   @SOAPBinding( 
+       style=SOAPBinding.Style.DOCUMENT, 
+       use=SOAPBinding.Use.LITERAL,
+       parameterStyle=SOAPBinding.ParameterStyle.WRAPPED)
+   public @WebResult(name="customerFullName") String 
+           getCustomerFullName(
+           @WebParam(name="customerID", 
+           mode=WebParam.Mode.IN) int id) {
+       
+       System.out.println("Getting name for customer with ID: " + id);
+       
+       //go to database here, etc...
+       if (id == 888) return "Homer Jay Simpson";
+       if (id == 999) return "Henry Walton Jones";
+       return "???";
+   }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Published by JAX-WS RI at http://jax-ws.dev.java.net. 
+RI's version is JAX-WS RI 2.1.3.1-hudson-417-SNAPSHOT. -->
+<!-- Generated by JAX-WS RI at http://jax-ws.dev.java.net. 
+RI's version is JAX-WS RI 2.1.3.1-hudson-417-SNAPSHOT. -->
+
+<definitions xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/
+  oasis-200401-wss-wssecurity-utility-1.0.xsd" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+  xmlns:tns="urn:com:soacookbook" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns="http://schemas.xmlsoap.org/wsdl/" 
+  targetNamespace="urn:com:soacookbook" 
+  name="CustomerLookupService">
+
+<ns1:Policy 
+    xmlns:ns1="http://schemas.xmlsoap.org/ws/2004/09/policy" 
+    wsu:Id="doWorkBindingPolicy">
+  <ns1:ExactlyOne>
+  <ns1:All>
+  <ns2:RMAssertion 
+    xmlns:ns2="http://schemas.xmlsoap.org/ws/2005/02/rm/policy">
+  </ns2:RMAssertion>
+  <ns3:UsingAddressing 
+    xmlns:ns3="http://www.w3.org/2006/05/addressing/wsdl">
+  </ns3:UsingAddressing>
+  </ns1:All>
+  </ns1:ExactlyOne>
+</ns1:Policy>
+
+<types>
+  <xsd:schema>
+    <xsd:import namespace="urn:com:soacookbook" 
+      schemaLocation="http://localhost:8080/TestXslWSWebApp/
+      CustomerLookupService?xsd=1">
+    </xsd:import>
+  </xsd:schema>
+</types>
+
+<message name="getCustomerFullName">
+  <part name="parameters" 
+    element="tns:getCustomerFullName"></part>
+</message>
+
+<message name="getCustomerFullNameResponse">
+  <part name="parameters" 
+    element="tns:getCustomerFullNameResponse"></part>
+</message>
+
+<portType name="CustomerLookupService">
+  <operation name="getCustomerFullName">
+    <input message="tns:getCustomerFullName"></input>
+    <output message="tns:getCustomerFullNameResponse"></output>
+  </operation>
+</portType>
+
+<binding name="customerLookupPortBinding" 
+    type="tns:CustomerLookupService">
+  <soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+      style="document"></soap:binding>
+  <operation name="getCustomerFullName">
+    <soap:operation soapAction=""></soap:operation>
+    <input>
+      <soap:body use="literal"></soap:body>
+    </input>
+    <output>
+      <soap:body use="literal"></soap:body>
+    </output>
+  </operation>
+</binding>
+
+<service name="CustomerLookupService">
+  <port name="customerLookupPort" binding="tns:customerLookupPortBinding">
+      <soap:address 
+        location="http://localhost:8080/TestXslWSWebApp/CustomerLookupService">
+      </soap:address>
+    </port>
+  </service>
+</definitions>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+
+<xs:schema xmlns:tns="urn:com:soacookbook" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  version="1.0" 
+  targetNamespace="urn:com:soacookbook">
+
+<xs:element name="getCustomerFullName" 
+  type="tns:getCustomerFullName"></xs:element>
+
+<xs:element name="getCustomerFullNameResponse" 
+  type="tns:getCustomerFullNameResponse"></xs:element>
+
+<xs:complexType name="getCustomerFullName">
+  <xs:sequence>
+    <xs:element name="customerID" type="xs:int"></xs:element>
+  </xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getCustomerFullNameResponse">
+  <xs:sequence>
+    <xs:element name="customerFullName" type="xs:string" 
+      minOccurs="0"></xs:element>
+  </xs:sequence>
+</xs:complexType>
+
+</xs:schema>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+    <S:Header/>
+    <S:Body>
+        <ns2:getCustomerFullName xmlns:ns2="urn:com:soacookbook">
+            <customerID>888</customerID>
+        </ns2:getCustomerFullName>
+    </S:Body>
+</S:Envelope>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+    <S:Body>
+        <ns2:getCustomerFullNameResponse xmlns:ns2="urn:com:soacookbook">
+            <customerFullName>Homer Jay Simpson</customerFullName>
+        </ns2:getCustomerFullNameResponse>
+    </S:Body>
+</S:Envelope>
+    
+    
+====================================
+<plnk:partnerLinkType name="CustomerLookupService"> 
+  <plnk:role name="lookupRole" portType="tns:CustomerLookupService"/> 
+</plnk:partnerLinkType>
+    
+    
+====================================
+//...
+<types>
+  <xsd:schema 
+    targetNamespace="http://soacookbook.com/wsdl/CustomerProcessEsb">
+    <xsd:import namespace="urn:com:soacookbook" 
+      schemaLocation="localhost_8080/TestXslWSWebApp/
+        CustomerLookupService.xsd_1.xsd"/>
+  </xsd:schema>
+</types>
+    
+    
+====================================
+//...
+<message name="CustomerProcessEsbOperationRequest">
+  <part name="getCustomerFullNameEsb" 
+    element="ns:getCustomerFullName"/>
+</message>
+<message name="CustomerProcessEsbOperationResponse">
+  <part name="getCustomerFullNameResponseEsb" 
+    element="ns:getCustomerFullNameResponse"/>
+</message>
+    
+    
+====================================
+<binding name="CustomerProcessEsbBinding" 
+    type="tns:CustomerProcessEsbPortType">
+
+  <soap:binding style="document" 
+    transport="http://schemas.xmlsoap.org/soap/http"/>
+
+  <operation name="CustomerProcessEsbOperation">
+    <soap:operation/>
+      <input name="input1">
+        <soap:body use="literal"/>
+      </input>
+      <output name="output1">
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+
+</binding>
+    
+    
+====================================
+Example: Completed WSDL Representing the Process,
+          CustomerProcessEsb.wsdl
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="CustomerProcessEsb" 
+  targetNamespace="http://soacookbook.com/wsdl/CustomerProcessEsb"
+  xmlns="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+  xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype" 
+  xmlns:ns="urn:com:soacookbook" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+  
+  <types>
+    <xsd:schema 
+      targetNamespace="http://soacookbook.com/wsdl/CustomerProcessEsb">
+      <xsd:import namespace="urn:com:soacookbook" 
+        schemaLocation="localhost_8080/TestXslWSWebApp/
+          CustomerLookupService.xsd_1.xsd"/>
+    </xsd:schema>
+  </types>
+  
+  <message name="CustomerProcessEsbOperationRequest">
+    <part name="getCustomerFullNameEsb" 
+      element="ns:getCustomerFullName"/>
+  </message>
+  <message name="CustomerProcessEsbOperationResponse">
+    <part name="getCustomerFullNameResponseEsb" 
+      element="ns:getCustomerFullNameResponse"/>
+  </message>
+
+  <portType name="CustomerProcessEsbPortType">
+    <operation name="CustomerProcessEsbOperation">
+      <input name="input1" 
+        message="tns:CustomerProcessEsbOperationRequest"/>
+      <output name="output1" 
+        message="tns:CustomerProcessEsbOperationResponse"/>
+    </operation>
+  </portType>
+  
+  <binding name="CustomerProcessEsbBinding" 
+      type="tns:CustomerProcessEsbPortType">
+    <soap:binding style="document" 
+      transport="http://schemas.xmlsoap.org/soap/http"/>
+      <operation name="CustomerProcessEsbOperation">
+        <soap:operation/>
+          <input name="input1">
+            <soap:body use="literal"/>
+          </input>
+          <output name="output1">
+            <soap:body use="literal"/>
+          </output>
+      </operation>
+  </binding>
+    
+  <service name="CustomerProcessEsbService">
+    <port name="CustomerProcessEsbPort" 
+      binding="tns:CustomerProcessEsbBinding">
+      <soap:address location="http://localhost:${HttpDefaultPort}/
+        CustomerProcessEsbService/CustomerProcessEsbPort"/>
+    </port>
+  </service>
+  
+  <plnk:partnerLinkType name="CustomerProcessEsb">
+    <plnk:role name="CustomerProcessEsbPortTypeRole" 
+      portType="tns:CustomerProcessEsbPortType"/>
+  </plnk:partnerLinkType>
+</definitions>
+    
+    
+====================================
+//...
+<sequence>
+  <receive name="ReceiveLookupRequest" 
+    createInstance="yes" 
+    partnerLink="CustomerProcessPartnerLink" 
+    operation="CustomerProcessEsbOperation" 
+    xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+    portType="tns:CustomerProcessEsbPortType" 
+    variable="CustomerProcessEsbOperationIn" />
+        
+    
+    
+====================================
+<invoke name="InvokeCustomerLookup" 
+  partnerLink="CustomerProcessPLink" 
+  operation="getCustomerFullName" 
+  xmlns:tns="urn:com:soacookbook" 
+  portType="tns:CustomerLookupService" 
+  inputVariable="GetCustomerFullNameIn" 
+  outputVariable="GetCustomerFullNameOut"/>
+
+    
+    
+====================================
+<variables>
+  <variable name="CustomerProcessEsbOperationIn" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      messageType="tns:CustomerProcessEsbOperationRequest"/>
+  <variable name="GetCustomerFullNameIn" 
+      xmlns:tns="urn:com:soacookbook" 
+      messageType="tns:getCustomerFullName"/>
+  //...
+</variables>
+
+<receive .... partnerLink="CustomerProcessPartnerLink" 
+    operation="CustomerProcessEsbOperation" 
+    xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+    portType="tns:CustomerProcessEsbPortType" 
+    variable="CustomerProcessEsbOperationIn"/>
+        
+<assign name="Assign1">
+  <copy>
+    <from>$CustomerProcessEsbOperationIn.getCustomerFullNameEsb/customerID</from>
+    <to>$GetCustomerFullNameIn.parameters/customerID</to>
+  </copy>
+</assign>
+    
+    
+====================================
+<variables>
+  <variable name="GetCustomerFullNameOut" 
+      xmlns:tns="urn:com:soacookbook" 
+      messageType="tns:getCustomerFullNameResponse"/>
+  <variable name="CustomerProcessEsbOperationOut" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      messageType="tns:CustomerProcessEsbOperationResponse"/>
+  //...
+</variables>
+
+  //...
+<invoke ... outputVariable="GetCustomerFullNameOut"/>
+<assign name="Assign2">
+  <copy>
+    <from>$GetCustomerFullNameOut.parameters/customerFullName</from>
+    <to>$CustomerProcessEsbOperationOut.getCustomerFullNameResponseEsb/
+         customerFullName</to>
+  </copy>
+</assign>
+    
+    
+====================================
+Example: CustomerProcess.bpel
+
+<?xml version="1.0" encoding="UTF-8"?>
+<process
+    name="CustomerProcess"
+    targetNamespace="http://soacookbook.com/bpel/CustomerProcess"
+    xmlns="http://docs.oasis-open.org/wsbpel/2.0/process/executable"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://soacookbook.com/bpel/CustomerProcess">
+
+  <import namespace="urn:com:soacookbook" 
+    location="localhost_8080/TestXslWSWebApp/CustomerLookupService.wsdl" 
+    importType="http://schemas.xmlsoap.org/wsdl/"/>
+  <import namespace="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+    location="CustomerProcessEsb.wsdl" 
+    importType="http://schemas.xmlsoap.org/wsdl/"/>
+    
+  <partnerLinks>
+    <partnerLink name="CustomerProcessPartnerLink" 
+        xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+        partnerLinkType="tns:CustomerProcessEsb" 
+        myRole="CustomerProcessEsbPortTypeRole"/>
+    <partnerLink name="CustomerProcessPLink" 
+        xmlns:tns="urn:com:soacookbook" 
+        partnerLinkType="tns:CustomerLookupService" 
+        partnerRole="lookupRole"/>
+  </partnerLinks>
+    
+  <variables>
+    <variable name="CustomerProcessEsbOperationOut" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      messageType="tns:CustomerProcessEsbOperationResponse"/>
+    <variable name="GetCustomerFullNameOut" 
+      xmlns:tns="urn:com:soacookbook" 
+      messageType="tns:getCustomerFullNameResponse"/>
+    <variable name="GetCustomerFullNameIn" 
+      xmlns:tns="urn:com:soacookbook" 
+      messageType="tns:getCustomerFullName"/>
+    <variable name="CustomerProcessEsbOperationIn" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      messageType="tns:CustomerProcessEsbOperationRequest"/>
+    </variables>
+    
+  <sequence>
+    <receive name="ReceiveLookupRequest" createInstance="yes" 
+      partnerLink="CustomerProcessPartnerLink" 
+      operation="CustomerProcessEsbOperation" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      portType="tns:CustomerProcessEsbPortType" 
+      variable="CustomerProcessEsbOperationIn"/>
+    
+    <assign name="Assign1">
+      <copy>
+        <from>$CustomerProcessEsbOperationIn.getCustomerFullNameEsb/
+                  customerID</from>
+        <to>$GetCustomerFullNameIn.parameters/customerID</to>
+      </copy>
+    </assign>
+
+    <invoke name="InvokeCustomerLookup" 
+      partnerLink="CustomerProcessPLink" 
+      operation="getCustomerFullName" 
+      xmlns:tns="urn:com:soacookbook" 
+      portType="tns:CustomerLookupService" 
+      inputVariable="GetCustomerFullNameIn" 
+      outputVariable="GetCustomerFullNameOut"/>
+    
+    <assign name="Assign2">
+      <copy>
+        <from>$GetCustomerFullNameOut.parameters/customerFullName</from>
+        <to>$CustomerProcessEsbOperationOut.getCustomerFullNameResponseEsb/
+            customerFullName</to>
+      </copy>
+    </assign>
+    
+    <reply name="ReplyToClient" 
+      partnerLink="CustomerProcessPartnerLink" 
+      operation="CustomerProcessEsbOperation" 
+      xmlns:tns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      portType="tns:CustomerProcessEsbPortType" 
+      variable="CustomerProcessEsbOperationOut"/>
+
+  </sequence>
+</process>
+    
+    
+====================================
+Deleting directory /home/ehewitt/soacookbook/repository/code/chapters/
+  CustomerProcess/build 
+Created dir: /home/ehewitt/soacookbook/repository/code/chapters/CustomerProcess/build 
+Copying 5 files to /home/ehewitt/soacookbook/repository/code/chapters/
+  CustomerProcess/build 
+Building jar: /home/ehewitt/soacookbook/repository/code/chapters/
+  CustomerProcess/build/SEDeployment.jar 
+BUILD SUCCESSFUL (total time: 0 seconds) 
+    
+    
+====================================
+//...
+[deploy-service-assembly]
+    Deploying a service assembly...
+        host=localhost
+        port=4848
+        file=/home/ehewitt/soacookbook/repository/code/chapters/
+             CustomerCASA/dist/CustomerCASA.zip
+[start-service-assembly]
+    Starting a service assembly...
+        host=localhost
+        port=4848
+        name=CustomerCASA
+BUILD SUCCESSFUL (total time: 1 second)
+    
+    
+====================================
+<soapenv:Envelope 
+  xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ 
+    http://schemas.xmlsoap.org/soap/envelope/" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+  xmlns:urn="urn:com:soacookbook">
+
+  <soapenv:Body>
+    <urn:getCustomerFullName>
+      <customerID>?3?</customerID>
+    </urn:getCustomerFullName>
+  </soapenv:Body>
+
+</soapenv:Envelope>
+    
+    
+====================================
+<SOAP-ENV:Envelope 
+  xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xsi:schemaLocation="http://schemas.xmlsoap.org/soap/envelope/ 
+    http://schemas.xmlsoap.org/soap/envelope/">
+  
+  <SOAP-ENV:Body>
+    <ns1:getCustomerFullNameResponse 
+      xmlns:msgns="http://soacookbook.com/wsdl/CustomerProcessEsb" 
+      xmlns:ns1="urn:com:soacookbook">
+      <customerFullName xmlns="">Homer Jay Simpson</customerFullName>
+    </ns1:getCustomerFullNameResponse>
+  </SOAP-ENV:Body>
+
+</SOAP-ENV:Envelope>
+    
+    
+====================================
+Test TestHomer
+Threads count Success: <1> Error: <0> Not completed: <0>
+------------- ---------------- ---------------
+BUILD SUCCESSFUL (total time: 1 second)
+    
+    
+====================================
+Threads count Success: <4> Error: <0> Not completed: <0> 
+Throughput: <40> invocations in <11.129>s = <3.594213316560338> invokes/s
+    
+    
+====================================
+//...
+
+<xmlns:plnk="http://docs.oasis-open.org/wsbpel/2.0/plnktype"
+
+<plnk:partnerLinkType name="CustomerProcessEsb">
+    <plnk:role name="CustomerProcessEsbPortTypeRole"
+        portType="tns:CustomerProcessEsbPortType"/>
+</plnk:partnerLinkType>
+    
+    
+====================================
+<invoke name="InvokeNewHire"
+    partnerLink="hr" 
+    portType="employeePT"
+    operation="provisionNewHire"
+    inputVariable="newHire"
+    outputVariable="employee"
+</invoke>
+
+    
+    
+====================================
+<toParts>?
+     <toPart part="NCName" fromVariable="BPELVariableName" />+
+</toParts>
+<fromParts>?
+     <fromPart part="NCName" toVariable="BPELVariableName" />+
+</fromParts>
+
+    
+    
+====================================
+<variables>
+   <variable name="myVar" messageType="test:HelloMessage"/>
+   <variable name="tmpVar" type="xsd:string"/>
+</variables>
+    
+    
+====================================
+<wsdl:message name="HelloMessage">
+    <wsdl:part name="TestPart" type="xsd:string"/>
+</wsdl:message>
+    
+    
+====================================
+<xsd:complexType name="Book">
+    <xsd:sequence>
+        <xsd:attribute name="title" type="xsd:string" minOccurs="1"/>
+        <xsd:element name="author" type="my:Author" minOccurs="1"/>
+    </xsd:sequence>
+</xsd:complextType>
+<xsd:complexType name="Author">
+    <xsd:sequence>
+        <xsd:element name="firstName" type="xsd:string"/>
+        <xsd:element name="lastName" type="xsd:string"/>
+    </xsd:sequence>
+</xsd:complextType>
+
+    
+    
+====================================
+<variables>
+   <variable name="aCookbook" messageType="my:Book"/>
+</variables>
+    
+    
+====================================
+$aCookbook/author/lastName
+    
+    
+====================================
+//your bpel variable:
+<bpel:variable name="Books" type="soa:Books" />
+
+//this expression gets the third title:
+
+$Books/soa:Books[3]/@Title
+    
+    
+====================================
+<o:author xmlns:o="http://oreilly.com">
+  <o:firstName>Tim</o:firstName>
+</o:author>
+    
+    
+====================================
+<from xmlns:orm="http://oreilly.com">
+  $AuthorVar/orm:firstName/text()
+</from>
+    
+    
+====================================
+bpel:getVariableProperty('stockResponse', 'inv:stockLevel') < 10
+    
+    
+====================================
+<validate variables="var1 var2">
+</validate>
+    
+    
+====================================
+<variables>
+  <variable name="SendEmailIn" 
+     messageType="emailws:sendEmail"/>
+//...
+
+<sequence name="CreateEmailSequence">
+  <assign name="CreateEmailMessage">
+    <copy>
+      <from>
+        <literal>myProcess@example.com</literal>
+      </from>
+      <to>$SendEmailIn.emailMsg/fromAddress</to>
+    </copy>
+//...
+    
+    
+====================================
+<copy>
+      <from>
+concat('The application received an error message:', 
+' AUTH-NUMBER=', $ProcessAppIn.app/authNumber, 
+' STATUS-MESSAGE=', $ProcessAppOut.appResponse/status/statusName, 
+' STATUS-CODE=', $ProcessAppOut.appResponse/status/statusCode)
+</from>
+      <to>$SendEmailIn.emailMsg/body</to>
+</copy>
+    
+    
+====================================
+The application received an error message:
+AUTH-NUMBER=605516
+STATUS-MESSAGE=OUT OF STOCK
+STATUS-CODE=SC404
+
+    
+    
+====================================
+<if name="IfInsufficientQty">
+  <condition>
+      ( ($ProcessAppOut.appResponse/status/statusName='INSUFF_QTY' )  
+    or  
+      ($ProcessAppOut.appResponse/status/statusName='OUT_OF_STOCK') )
+  </condition>
+
+  <sequence name="EmailErrorSequence">
+
+    //make email message here using assign, etc...
+
+    <invoke name="InvokeSendEmail" partnerLink="EmailPartner" 
+          operation="sendEmail" portType="emailws:Email" 
+          inputVariable="SendEmailIn"/>
+
+  </sequence>
+</if>
+    
+    
+====================================
+<if standard-attributes>
+   standard-elements
+
+   <condition expressionLanguage="someURI"?>
+       boolean-expression
+   </condition>
+   activity
+
+   <elseif>*
+       <condition expressionLanguage="someURI"?>
+            boolean-expression
+       </condition>
+       activity
+   </elseif>
+
+   <else>?
+       activity
+   </else>
+</if>
+
+    
+    
+====================================
+<if name="checkAvailability">
+  <condition>
+    starts-with($purchaseOrder.purchaseOrder/po:orderDescription, 
+               'Product 123')
+  </condition>
+
+  <assign name="InventoryAvailable">
+    <copy>
+      <from>true()</from>
+        <to>$inventoryStatus.inventoryPart/i:inventoryAvail</to>
+      </copy>
+      <copy>
+        <from>'This item is available'</from>
+        <to>$inventoryStatus.inventoryPart/i:inventoryStatusMessage</to>
+      </copy>
+    </assign>
+<else>
+    <assign name="InsufficientQty">
+        <copy>
+          <from>false()</from>
+          <to>$inventoryStatus.inventoryPart/i:inventoryAvail</to>
+        </copy>
+        <copy>
+          <from>'Out of stock'</from>
+          <to>$inventoryStatus.inventoryPart/i:inventoryStatusMessage</to>
+        <copy>
+      </assign>
+    </else>
+</if>
+    
+    
+====================================
+<sequence name="CheckInventory">
+  <receive name="InventoryServiceReceive"
+    partnerLink="inventorySevicePL"
+    portType="i:inventoryPortType"
+    operation="inventoryService"
+    variable="purchaseOrder"
+    createInstance="yes">
+  </receive>
+  <if name="ifQty">
+    <condition>...</condition>
+      //...
+    <else>
+      //...
+    </else>
+  </if>
+  <reply name="InventoryServiceReply"
+     partnerLink="inventorySevicePL"
+     portType="i:inventoryPortType"
+     operation="inventoryService"
+     variable="status"/>
+</sequence>
+    
+    
+====================================
+<scope isolated="yes|no"? exitOnStandardFault="yes|no"?
+       standard-attributes>
+   standard-elements
+   <variables />?
+   <partnerLinks />?
+   <messageExchanges />?
+   <correlationSets />?
+   <eventHandlers />?
+   <faultHandlers />?
+   <compensationHandler />?
+   <terminationHandler />?
+
+   activity
+
+</scope>
+
+    
+    
+====================================
+<scope>
+   <faultHandlers>
+      <catch>
+         <terminate/>
+      </catch>
+   </faultHandlers>
+
+   <!–- The "primary activity"-->
+   <sequence>
+      <invoke .../>
+      <assign .../>
+   </sequence>
+</scope>
+
+    
+    
+==================

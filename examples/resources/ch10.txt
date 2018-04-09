@@ -1,0 +1,418 @@
+chapter: Advanced Orchestrations with BPEL
+==================
+<else>
+  <sequence name="Purchase">
+                   
+    <flow name="SaleCompletedNotifyFlow">
+                                                
+      <invoke name="NotifySeller" 
+        partnerLink="contactPLink" 
+        operation="contactService" 
+        portType="ct:contactPortType" 
+        inputVariable="ContactServiceIn" 
+        outputVariable="ContactServiceOut"/>
+                        
+      <invoke name="NotifyShipper" 
+        partnerLink="requestShippingPLink" 
+        operation="shippingService" 
+        portType="shp:shippingPortType" 
+        inputVariable="ShippingServiceIn" 
+        outputVariable="ShippingerviceOut"/>
+                        
+    </flow>
+                    
+    <assign name="AssignValues">
+//...
+    
+    
+====================================
+//...
+<flow>
+   <links>
+      <link name="airplaneBooked" />
+      <link name="hotelBooked" />
+   </links>
+
+   <receive name="receiveAirReservation" ...>
+      <sources>
+         <source linkName="airplaneBooked" />
+      </sources>
+   </receive>
+
+   <receive name="receiveHotelReservation" ...>
+      <sources>
+         <source linkName="hotelBooked" />
+      </sources>
+   </receive>
+
+   <scope name="submitExpenseScope">
+      <targets>
+         <joinCondition>
+            $airplaneBooked and $hotelBooked
+         </joinCondition>
+
+         <target linkName="airplaneBooked" />
+         <target linkName="hotelBooked" />
+      </targets>
+
+      <compensationHandler>
+         <invoke name="handleReservationIssue" ... />
+      </compensationHandler>
+
+      <invoke name="submitExpenseReport" ... />
+   </scope>
+</flow>
+    
+    
+====================================
+<wait until="2010-12-31T23:59:59+01:100"/>
+    
+    
+====================================
+<wait for="PT3H05M" />
+    
+    
+====================================
+<wait for="P1Y2M3DT4H5M" />
+    
+    
+====================================
+<pick name="Pick1">
+  <onMessage partnerLink="SupplyServicePLink" 
+    operation="addItem" 
+    portType="sp:purchaseOrderPT" 
+    variable="LineItemIn">
+    <correlations .../> <!--do work to accept a new order line item-->
+  </onMessage>
+
+  <onMessage partnerLink="SupplyServicePLink" 
+    operation="submitOrder" 
+    portType="sp:purchaseOrderPT" 
+    variable="SendPurchaseOrderIn">
+    <correlations .../> <!--do work for when order is complete -->
+  </onMessage>
+
+  <onAlarm>
+    <for>'P0DT2H'</for>
+    <empty/><!-- notify timeout on order completion -->
+  </onAlarm>
+</pick>
+    
+    
+====================================
+<variables>
+    <variable name="CartFault" messageType="pos:cartFaultType"></variable>
+</variables>
+
+<faultHandlers>
+    <catch faultName="CartFault" 
+        faultVariable="CartFault">
+    //...handle with an activity, such as <reply> to caller
+    </catch>
+</faultHandlers>
+    
+    
+====================================
+<message name="cartFaultType">
+  <part name="faultInfo" type="xsd:string"></part>
+</message>
+    
+<portType name="CartPort">
+  <operation name="placeOrder">
+    <input name="submitOrderRequest" message="tns:OrderMsg"></input>
+    <output name="orderResponse" message="tns:OrderMsg"></output>
+    <fault name="cannotCompleteOrder" message="tns:cartFaultType"></fault>
+  </operation>
+</portType>
+
+<binding name="cartBinding" type="tns:cartPort">
+  <soap:binding style="document" 
+    transport="http://schemas.xmlsoap.org/soap/http"/>
+  <operation name="placeOrder">
+      <soap:operation style="rpc"/>
+      <input name="submitOrderRequest">
+          <soap:body parts="purchaseOrder" use="literal"/>
+      </input>
+      <output name="orderResponse">
+          <soap:body parts="purchaseOrder" use="literal"/>
+      </output>
+      <fault name="cannotCompleteOrder">
+          <soap:fault name="cannotCompleteOrder" use="literal"/>
+      </fault>
+  </operation>
+</binding>
+    
+    
+====================================
+public static void main(String... arg) throws Exception { ... }
+    
+    
+====================================
+<bpel:invoke inputVariable="aRequest"
+    operation="checkStock" outputVariable="aResponse"
+    partnerLink="myCartPartner" portType="cart:CartPortType">
+    <bpel:catchAll>
+      //...
+    </bpel:catchAll>
+</bpel:invoke>
+
+    
+    
+====================================
+<bpel:invoke inputVariable="aRequest"
+    operation="checkStock" outputVariable="aResponse"
+    partnerLink="myCartPartner" portType="cart:CartPortType">
+    <catch faultName="CartFault" 
+        faultVariable="CartFault">
+    //...handle with an activity, such as <reply> to caller
+    </catch>
+    <bpel:catchAll>
+      //...
+    </bpel:catchAll>
+</bpel:invoke>
+
+    
+    
+====================================
+try {
+  //...some work
+} catch (IOException ioe) {
+  //handle
+} catch (Exception e) {
+  //handle
+}
+    
+    
+====================================
+<if name="Decision">
+  <condition>
+    starts-with($cartRequest.cartData/po:userDomain, 'WEST')
+  </condition>
+  <sequence name="MySequence">
+     <assign name="MyAssign">
+       <copy>
+         <from>'User must order from a different region.'</from>
+         <to part="faultInfo" variable="wrongDomainFault"/>
+       </copy>
+     </assign>
+     <throw name="ThrowAddToCart" faultName="pos:wrongDomain"
+        faultVariable="wrongDomainFault" />
+   </sequence>
+</if>
+    
+    
+====================================
+<if>
+    <condition>...
+  <else>
+    <condition>...
+  </else>
+  <elseif>
+    <exit />
+  </elseif>
+</if>
+    
+    
+====================================
+bpel:doXslTransform(xslStyleSheetPath, sourceDocument, 
+                   [paramName, paramValue]*)
+    
+    
+====================================
+<invoke partnerLink="Warehouse" 
+   outputVariable="inventoryItems" ...>
+</invoke>
+
+<!-- Reformat the items coming from the warehouse
+     for another system in the process -->
+<assign>
+  <copy>
+    <from>
+      bpel:doXslTransform("orderItems.xsl", $inventoryItems)
+    </from>
+    <to>
+      $orderItems
+    </to>
+  </copy>
+</assign>
+
+...
+    
+    
+====================================
+<sequence>
+    <receive name="sendPurchaseOrder"
+         partnerLink="POServicePLink"
+         portType="pos:purchaseOrderPT"
+         operation="sendPurchaseOrder"
+         variable="purchaseOrderRequest"
+         createInstance="yes">
+    </receive>
+    <validate name="validatePO" variables="purchaseOrderRequest" />
+<assign name="Assign_2">
+    
+    
+====================================
+<wsdl:definitions...>
+  ...
+<wsdl:message name="sendPurchaseResponse">
+  <wsdl:part name="Confirm" element="po:purchaseResponse" />
+</wsdl:message>
+
+<!-- Correlation properties here -->
+<vprop:property name="customerId" type="xs:string"/>
+<vprop:property name="orderId" type="xs:string"/>
+
+<vprop:propertyAlias propertyName="tns:customerId"
+    messageType="tns:sendPurchaseResponse" part="Confirm">
+  <vprop:query>/purchaseOrder/cust/email</vprop:query>
+</vprop:propertyAlias>
+    
+    
+====================================
+<process>
+<correlationSets>
+  <correlationSet name="PurchaseOrder"
+     properties="po:customerId po:orderId">
+  </correlationSet>
+</correlationSets>
+    
+    
+====================================
+<correlations>?
+   <correlation set="NCName" initiate="yes|join|no"?
+      pattern="request|response|request-response"? />+
+</correlations>
+
+    
+    
+====================================
+<invoke partnerLink="Seller" portType="SP:PurchasingPortType"
+  operation="Purchase" inputVariable="sendPO" 
+  outputVariable="getResponse">
+  <correlations>
+    <correlation set="PurchaseOrder" initiate="yes" pattern="request"/>
+    <correlation set="Invoice" initiate="yes" pattern="response" />
+  </correlations>
+  <catch faultName="SP:RejectPO" faultVariable="smsg:POReject">
+    <!-- handle fault -->
+  </catch>
+</invoke>
+    
+    
+====================================
+<while>
+  <condition>$lineItems < 10</condition>
+  <scope>...</scope>
+</while>
+    
+    
+====================================
+<while>
+   <condition>$counter < $lineItems</condition>
+
+   <sequence>
+      <invoke partnerLink="CheckInventory" ... />
+      <!–- Here we increment the condition's counter-->
+      <assign>
+         <copy>
+            <from expression="$counter + 1" />
+            <to variable="counter" />
+         </copy>
+      </assign>
+   </sequence>
+</while>
+
+    
+    
+====================================
+<repeatUntil>
+   <some activity />
+   <condition>
+       boolean expression
+   </condition>
+</repeatUntil>
+
+    
+    
+====================================
+<repeatUntil>
+   <sequence>
+      <invoke partnerLink="CheckInventory" ... />
+      <!–- Here we increment the condition's counter-->
+      <assign>
+         <copy>
+            <from expression="$counter + 1" />
+            <to variable="counter" />
+         </copy>
+      </assign>
+   </sequence>
+
+  <!-- Now the condition is down here -->
+  <condition>$counter < $lineItems</condition>
+</repeatUntil>
+
+    
+    
+====================================
+<forEach counterName="i">
+   <startCounterValue>1</startCounterValue>
+   <finalCounterValue>
+      count($order.document/items/lineItem)
+   </finalCounterValue>
+...
+</forEach>
+    
+    
+====================================
+<forEach counterName="i">
+   <startCounterValue>1</startCounterValue>
+   <finalCounterValue>
+      count($order.document/items/lineItem)
+   </finalCounterValue>
+
+   <scope>
+      <sequence>
+         <assign>
+            <copy>
+               <from variable="order"
+                 part="document"
+                 query="/items/lineItem[$i]/partNumber"/>
+               <to variable="part" />
+            </copy>
+         </assign>
+         <invoke partnerLink="Supply" ... />
+      </sequence>
+   </scope>
+
+</forEach>
+
+    
+    
+====================================
+<forEach parallel="yes|no">
+  ....
+  <completionCondition>
+    <branches>...
+  </completionCondition>
+<scope>...
+    
+    
+====================================
+<forEach counterName="i" parallel="yes">
+   <startCounterValue>1</startCounterValue>
+   <finalCounterValue>300</finalCounterValue>
+
+   <completionCondition>
+      <branches successfulBranchesOnly="yes">50</branches>
+   </completionCondition>
+
+   <scope>
+        <invoke partnerLink="Confirm" ... />
+        <receive partnerLink="Confirm" ... />
+   </scope>
+</forEach>
+
+    
+    
+==================

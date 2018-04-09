@@ -1,0 +1,303 @@
+chapter: Quality of Service
+==================
+Example: WS-RM Request Message
+
+---[HTTP request]---
+SOAPAction: "http://soacookbook.com/sigcap/get"
+Accept: text/xml, multipart/related, 
+text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Content-Type: multipart/related;
+start="<rootpart*c19f6849-27ee-473a-b02c-5e7b1130818a@example.jaxws.sun.com>";
+type="application/xop+xml";boundary="uuid:c19f6849-27ee-473a-b02c-5e7b1130818a";
+start-info="text/xml"
+--uuid:c19f6849-27ee-473a-b02c-5e7b1130818a
+Content-Id: <rootpart*c19f6849-27ee-473a-b02c-5e7b1130818a@example.jaxws.sun.com>
+Content-Type: application/xop+xml;charset=utf-8;type="text/xml"
+Content-Transfer-Encoding: binary
+
+<?xml version='1.0' encoding='UTF-8'?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+  <To xmlns="http://www.w3.org/2005/08/addressing">
+    http://localhost:8080/sigcap-ws-1.1.0/SigCapService
+  </To>
+  <Action xmlns="http://www.w3.org/2005/08/addressing">
+    http://soacookbook.com/sigcap/get
+  </Action>
+  <ReplyTo xmlns="http://www.w3.org/2005/08/addressing">
+    <Address>http://www.w3.org/2005/08/addressing/anonymous</Address>
+  </ReplyTo>
+
+  <MessageID xmlns="http://www.w3.org/2005/08/addressing">
+    uuid:1ab08d0b-b919-479c-b0f6-9a843b4c8b28
+  </MessageID>
+  <ns3:Sequence xmlns:ns2="http://www.w3.org/2005/08/addressing" 
+    xmlns:ns3="http://schemas.xmlsoap.org/ws/2005/02/rm" 
+    xmlns:ns4="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-secext-1.0.xsd" 
+      xmlns:ns5="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-utility-1.0.xsd" 
+      xmlns:ns6="http://schemas.microsoft.com/ws/2006/05/rm">
+    <ns3:Identifier>uuid:8ce634c6-7b0f-4e7c-9e21-77eac4491944
+  </ns3:Identifier>
+  <ns3:MessageNumber>1</ns3:MessageNumber>
+  </ns3:Sequence>
+</S:Header>
+
+<S:Body>
+  <ns2:get xmlns:ns2="http://soacookbook.com/sigcap">
+    <ns2:getRequest>
+      60990aff-1c1f-45a7-b35c-cf0410908e36
+    </ns2:getRequest>
+  </ns2:get>
+</S:Body>
+</S:Envelope>
+--uuid:c19f6849-27ee-473a-b02c-5e7b1130818a--
+    
+    
+====================================
+<xs:schema xmlns:tns="http://soacookbook.com/sigcap"...> 
+ <xs:complexType name="get">
+  <xs:sequence>
+    <xs:element name="getRequest" type="xs:string" 
+      form="qualified" minOccurs="0" />
+  </xs:sequence>
+    
+    
+====================================
+Example: WS-RM Response Message
+
+---[HTTP response 200]---
+Transfer-encoding: chunked
+null: HTTP/1.1 200 OK
+Content-type: multipart/related;
+start="<rootpart*23d59158-64d6-4555-89d3-5ccbfaa187f3>";
+type="application/xop+xml";
+boundary="uuid:23d59158-64d6-4555-89d3-5ccbfaa187f3";
+start-info="text/xml"
+Server: Sun Java System Application Server 9.1_02
+X-powered-by: Servlet/2.5
+Date: Tue, 09 Sep 2008 00:22:45 GMT
+--uuid:23d59158-64d6-4555-89d3-5ccbfaa187f3
+Content-Id: <rootpart*23d59158-64d6-4555-89d3-5ccbfaa187f3>
+Content-Type: application/xop+xml;charset=utf-8;type="text/xml"
+Content-Transfer-Encoding: binary
+
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+  <To xmlns="http://www.w3.org/2005/08/addressing">
+    http://www.w3.org/2005/08/addressing/anonymous
+  </To>
+  <Action xmlns="http://www.w3.org/2005/08/addressing">
+    http://ns.dte.com/dtc/sigcap/getResponse
+  </Action>
+  <MessageID xmlns="http://www.w3.org/2005/08/addressing">
+    uuid:f31721de-af5b-470d-9f22-1bab02383130
+  </MessageID>
+  <RelatesTo xmlns="http://www.w3.org/2005/08/addressing">
+    uuid:1ab08d0b-b919-479c-b0f6-9a843b4c8b28
+  </RelatesTo>
+
+  <ns2:Sequence 
+    xmlns:ns6="http://schemas.microsoft.com/ws/2006/05/rm" 
+    xmlns:ns5="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-utility-1.0.xsd" 
+    xmlns:ns4="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-secext-1.0.xsd" 
+    xmlns:ns3="http://www.w3.org/2005/08/addressing" 
+    xmlns:ns2="http://schemas.xmlsoap.org/ws/2005/02/rm">
+
+    <ns2:Identifier>
+      uuid:0ffa7ef6-bcea-4d63-ba2c-1a5c3d1a4832
+    </ns2:Identifier>
+    <ns2:MessageNumber>1</ns2:MessageNumber>
+  </ns2:Sequence>
+
+  <ns2:AckRequested 
+    xmlns:ns6="http://schemas.microsoft.com/ws/2006/05/rm" 
+    xmlns:ns5="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-utility-1.0.xsd" 
+    xmlns:ns4="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-secext-1.0.xsd" 
+    xmlns:ns3="http://www.w3.org/2005/08/addressing" 
+    xmlns:ns2="http://schemas.xmlsoap.org/ws/2005/02/rm">
+
+    <ns2:Identifier>
+      uuid:0ffa7ef6-bcea-4d63-ba2c-1a5c3d1a4832
+    </ns2:Identifier>
+  </ns2:AckRequested>
+
+  <ns2:SequenceAcknowledgement 
+    xmlns:ns6="http://schemas.microsoft.com/ws/2006/05/rm" 
+    xmlns:ns5="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-utility-1.0.xsd" 
+    xmlns:ns4="http://docs.oasis-open.org/wss/2004/01/oasis-200401
+      -wss-wssecurity-secext-1.0.xsd" 
+    xmlns:ns3="http://www.w3.org/2005/08/addressing" 
+    xmlns:ns2="http://schemas.xmlsoap.org/ws/2005/02/rm">
+    <ns2:Identifier>
+      uuid:8ce634c6-7b0f-4e7c-9e21-77eac4491944
+    </ns2:Identifier>
+
+    <ns2:AcknowledgementRange Upper="1" Lower="1" />
+  </ns2:SequenceAcknowledgement>
+</S:Header>
+
+<S:Body>
+  <ns2:getResponse xmlns:ns2="http://ns.dte.com/dtc/sigcap">
+    <ns2:getResponse>
+      <fileFormat>TIFF</fileFormat>
+      <signatureData>
+        <Include xmlns="http://www.w3.org/2004/08/xop/include" 
+          href="cid:2b048436-7fcb-4166-b142-65121d32008f"/>
+      </signatureData>
+      <signatureId>60990aff-1c1f-45a7-b35c-cf0410908e36
+      </signatureId>
+    </ns2:getResponse>
+  </ns2:getResponse>
+</S:Body>
+
+</S:Envelope>
+--uuid:23d59158-64d6-4555-89d3-5ccbfaa187f3
+Content-Id: <2b048436-7fcb-4166-b142-65121d32008f>
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: binary
+
+[binary data]
+--uuid:23d59158-64d6-4555-89d3-5ccbfaa187f3--
+    
+    
+====================================
+<S:Body>
+  <ns2:TerminateSequence 
+    xmlns:ns2="http://schemas.xmlsoap.org/ws/2005/02/rm" ...>
+  <ns2:Identifier>
+    uuid:0ffa7ef6-bcea-4d63-ba2c-1a5c3d1a4832
+  </ns2:Identifier>
+</ns2:TerminateSequence>
+</S:Body>
+    
+    
+====================================
+<wsrm:SequenceAcknowledgement>
+   <wsrm:Identifier>http://soacookbook/123</wsrm:Identifier>
+   <wsrm:AcknowledgementRange Upper="2" Lower="1"/>
+   <wsrm:AcknowledgementRange Upper="6" Lower="4"/>
+   <wsrm:AcknowledgementRange Upper="10" Lower="8"/>
+</wsrm:SequenceAcknowledgement>
+
+    
+    
+====================================
+<definitions
+ xmlns:wsu="http://docs.oasis-open.org/wss/2004/
+   01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+ xmlns:wsp="http://www.w3.org/ns/ws-policy"
+ xmlns:wsrm="http://schemas.xmlsoap.org/ws/2005/02/rm/policy" 
+ ...>
+<wsp:UsingPolicy required="true" />
+
+<wsp:Policy wsu:Id="MyPortBinding_ReliableMessaging_Policy">
+    <wsp:ExactlyOne>
+         <wsp:All>
+           <wsrm:RMAssertion>
+                <!-- 2.5 minutes -->
+                <wsrm:InactivityTimeout Milliseconds="150000"/>
+                <!-- Retry after 5 seconds unacknowledged -->
+                <wsrm:BaseRetransmissionInterval Milliseconds="5000" />
+            </wsrm:RMAssertion>
+        </wsp:All>
+    </wsp:ExactlyOne>
+</wsp:Policy>
+
+//....
+
+<binding name="MyPortBinding" type="tns:MyPort">
+  <wsaw:UsingAddressing required="true"/>
+  <wsp:PolicyReference URI="#MyPortBinding_ReliableMessaging_Policy"/>
+    
+    
+====================================
+<dependency>
+  <groupId>com.sun.xml.ws</groupId>
+  <artifactId>webservices-rt</artifactId>
+  <version>1.3</version>
+  <scope>compile</scope>
+</dependency>
+        
+<dependency>
+  <groupId>javax.xml</groupId>
+  <artifactId>webservices-api</artifactId>     
+  <version>1.3</version>
+  <scope>compile</scope>
+</dependency>
+    
+    
+====================================
+Example: HelloRM.java A Reliable Messaging Web Service
+
+package com.soacookbook;
+
+import javax.jws.WebService;
+
+import weblogic.jws.Policy;
+import weblogic.jws.ReliabilityBuffer;
+
+@WebService
+@Policy(attachToWsdl=true, 
+  direction=Policy.Direction.both, 
+  uri="DefaultReliability.xml")
+public class ReliableWS {
+
+  @ReliabilityBuffer(retryCount=10, 
+    retryDelay="10 seconds")
+  public void sayHello(String input) {
+    System.out.println("Hello from RM, " + input);
+
+  }
+}
+    
+    
+====================================
+<?xml version="1.0"?>
+<wsp:Policy
+   xmlns:wsrm="http://schemas.xmlsoap.org/ws/2005/02/rm/policy"
+   xmlns:wsp="http://schemas.xmlsoap.org/ws/2004/09/policy"
+   xmlns:beapolicy="http://www.bea.com/wsrm/policy">
+
+  <wsrm:RMAssertion >
+
+    <wsrm:InactivityTimeout
+        Milliseconds="600000" />
+    <wsrm:BaseRetransmissionInterval
+        Milliseconds="3000" />
+    <wsrm:ExponentialBackoff />
+    <wsrm:AcknowledgementInterval
+        Milliseconds="200" />
+    <beapolicy:Expires Expires="P1D" optional="true"/>
+  </wsrm:RMAssertion>
+
+</wsp:Policy>
+    
+    
+====================================
+import weblogic.jws.ReliabilityErrorHandler;
+import weblogic.wsee.reliability.ReliabilityErrorContext;
+import weblogic.wsee.reliability.ReliableDeliveryException;
+//...
+
+@ReliabilityErrorHandler(target="port")
+public void onReliableMessageDeliveryError(ReliabilityErrorContext ctx) {
+  ReliableDeliveryException fault = ctx.getFault();
+  String msg = "";
+  if (fault != null) {
+    msg = ctx.getFault().getMessage();
+  }
+  String op = ctx.getOperationName();
+  System.out.println("Reliable operation " + op + 
+    " was probably lost. Message=" + message);
+}
+    
+    
+==================

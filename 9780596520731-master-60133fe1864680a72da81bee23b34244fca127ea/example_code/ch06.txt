@@ -1,0 +1,1816 @@
+chapter: Creating Web Service Applications with JAX-WS
+==================
+package com.soacookbook;
+
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+
+@WebService public class Hello {
+  public String sayHello(String name) {
+    return "Hello, " + name";
+  }
+}
+    
+    
+====================================
+package com.soacookbook;
+
+import javax.jws.WebService;
+import javax.jws.WebMethod;
+
+@WebService public class Hello {
+  
+  @SOAPBinding(parameterStyle=SOAPBinding.ParameterStyle.BARE)
+  public String sayHello(String name) {
+    return "Hello, " + name";
+  }
+}
+    
+    
+====================================
+$ wsimport -version
+JAX-WS RI 2.1.1 in JDK 6
+
+    
+    
+====================================
+wsimport -verbose -d gen -extension 
+-keep http://www.webservicex.net/WeatherForecast.asmx?wsdl
+
+    
+    
+====================================
+Example: Client Class that Invokes the Weather Forecast Service at
+          WebServiceX.net
+
+import net.webservicex.*;
+import java.math.*;
+
+/*
+ Calls the forecast service at WebServiceX.net.
+*/
+public class WeatherClient {
+ public static void main(String...arg) {
+    System.out.println("Invoking...");
+    WeatherForecast service = new WeatherForecast();
+    WeatherForecastSoap port = service.getWeatherForecastSoap();
+
+    //Invoke Service and Get Result
+    WeatherForecasts forecasts = port.getWeatherByZipCode("85255");
+
+    //Use the generated objects in the result
+    String placeName = forecasts.getPlaceName();
+
+    ArrayOfWeatherData arr = forecasts.getDetails();
+    WeatherData data = arr.getWeatherData().get(0);
+
+    System.out.println("Place=" + placeName);
+    System.out.println("Day=" + data.getDay());
+    System.out.println("High Temp (F)=" + data.getMaxTemperatureF());
+ 
+    System.out.println("All done.");
+ }
+}
+    
+    
+====================================
+$ javac -cp gen WeatherClient.java
+    
+    
+====================================
+$ java -cp gen:. WeatherClient
+    
+    
+====================================
+Invoking...
+Place=SCOTTSDALE
+Day=Tuesday, July 29, 2008
+High Temp (F)=94
+All done.
+    
+    
+====================================
+@WebService(targetNamespace="http://ns.soacookbook.com", 
+  name="CatalogService")
+    
+    
+====================================
+<definitions targetNamespace="http://ns.soacookbook.com" 
+  name="CatalogService">
+    
+    
+====================================
+<definitions targetNamespace="http://ch03.soacookbook.com/"
+    
+    
+====================================
+@WebService(targetNamespace="http://ns.soacookbook.com", 
+  name="CatalogService")
+    
+    
+====================================
+@WebService(serviceName="CatalogService", targetNamespace="http://ns.soacookbook.com") 
+public class CatalogWS implements Catalog { ... }
+    
+    
+====================================
+private CatalogService service;
+CatalogWS port = service.getCatalogWSPort();
+    
+    
+====================================
+package com.soacookbook.ch03;
+//...
+@WebService(serviceName="CatalogServiceSN",
+    targetNamespace="http://ns.soacookbook.com")
+    
+    
+====================================
+http://localhost:8080/soaCookbookWS/CatalogServiceSN?wsdl
+    
+    
+====================================
+@WebServiceClient(name = "CatalogServiceSN", 
+targetNamespace = "http://ns.soacookbook.com", 
+wsdlLocation = "http://localhost:8080/soaCookbookWS/CatalogServiceSN?wsdl")
+public class CatalogServiceSN
+    extends Service { ... }
+    
+    
+====================================
+private final static URL CATALOGSERVICESN_WSDL_LOCATION;
+    
+    
+====================================
+@WebService(serviceName="CatalogServiceSN", 
+  portName="CatalogPort",
+  targetNamespace="http://ns.soacookbook.com")
+    
+    
+====================================
+public class CatalogServiceSN extends Service {
+  
+  @WebEndpoint(name = "CatalogPort")
+  public CatalogWS getCatalogPort() { ...}
+    
+    
+====================================
+<service name="CatalogServiceSN">
+<port name="CatalogPort" binding="tns:CatalogPortBinding">
+    
+    
+====================================
+@WebServiceRef
+private CatalogServiceSN catalogServiceIT;
+    
+    
+====================================
+<service-ref>
+<display-name>com.soacookbook.ch03.InjectionServlet/catalogServiceIT
+</display-name>
+<service-ref-name>com.soacookbook.ch03.InjectionServlet/catalogServiceIT
+</service-ref-name>
+<service-interface>com.soacookbook.ch03.CatalogServiceSN
+</service-interface>
+<wsdl-file>http://localhost:8080/soaCookbookWS/CatalogServiceSN?wsdl
+</wsdl-file>
+<service-qname xmlns:service-qname_ns__="http://ns.soacookbook.com">
+service-qname_ns__:CatalogServiceSN</service-qname>
+<injection-target>
+  <injection-target-class>com.soacookbook.ch03.InjectionServlet
+  </injection-target-class>
+  <injection-target-name>catalogServiceIT</injection-target-name>
+</injection-target>
+</service-ref>
+    
+    
+====================================
+Example: Hello Web Service Client, HelloClient.java
+
+package com.soacookbook.ch03;
+
+import java.net.URL;
+import java.util.Iterator;
+import javax.xml.namespace.QName;
+import javax.xml.ws.Service;
+
+public class HelloClient {
+  public static void main(String[] args) throws Exception {
+
+    //Specify the WSDL 
+    URL wsdlLocation = new URL("http://localhost:9999/hello?wsdl");
+    
+    //Create a Qualified Name that represents the 
+    //namespace and local part of the service
+    QName serviceName = new QName("http://ch03.soacookbook.com/", 
+            "HelloWSService");
+    
+    //Create a proxy to get a port stub from
+    Service service = Service.create(wsdlLocation, serviceName);
+            
+    // Return a list of QNames of ports
+    System.out.println("QNames of service endpoints:");
+    Iterator<QName> it = service.getPorts();
+    QName lastEndpoint = null;
+    while (it.hasNext()) {
+    lastEndpoint = it.next();
+        System.out.println("Name: " + lastEndpoint);
+        //prints: Name: {http://ch03.soacookbook.com/}HelloWSPort
+    }
+
+    // Get the Hello stub
+    Hello hello = service.getPort(lastEndpoint, Hello.class);
+    
+    //Invoke the business method
+    String result = hello.sayHello("Eben");
+    System.out.println("\nResponse: " + result);
+  }
+}
+    
+    
+====================================
+QNames of service endpoints:
+Name: {http://ch03.soacookbook.com/}HelloWSPort
+
+Response: Hello, Eben!
+    
+    
+====================================
+<portType name="CalculatorWS">
+<operation name="add">
+<input message="tns:add"></input>
+<output message="tns:addResponse"></output>
+</operation>
+</portType>
+//The service name element is:
+<service name="CalculatorWSService">
+    
+    
+====================================
+>wsimport  -d /home/ehewitt/soacookbook/code/imported -target 2.1 \
+    -verbose http://localhost:4933/CalculatorApp/CalculatorWSService?wsdl
+parsing WSDL...
+generating code...
+
+org\me\calculator\Add.java
+org\me\calculator\AddResponse.java
+org\me\calculator\CalculatorWS.java
+org\me\calculator\CalculatorWSService.java
+org\me\calculator\ObjectFactory.java
+org\me\calculator\package-info.java
+
+compiling code...
+
+javac -d /home/ehewitt/soacookbook/code/imported -classpath //...
+>
+    
+    
+====================================
+@WebServiceClient(name = "CalculatorWSService", 
+  targetNamespace = "http://calculator.me.org/", 
+  wsdlLocation = "http://localhost:4933/CalculatorApp/CalculatorWSService?wsdl")
+public class CalculatorWSService extends Service { //...
+  @WebEndpoint(name = "CalculatorWSPort")
+    public CalculatorWS getCalculatorWSPort() {
+        return super.getPort(new QName("http://calculator.me.org/", 
+          "CalculatorWSPort"), CalculatorWS.class);
+    }
+    
+    
+====================================
+@WebMethod
+@WebResult(targetNamespace = "")
+@RequestWrapper(localName = "add", 
+  targetNamespace = "http://calculator.me.org/", 
+  className = "org.me.calculator.Add")
+@ResponseWrapper(localName = "addResponse", 
+  targetNamespace = "http://calculator.me.org/", 
+  className = "org.me.calculator.AddResponse")
+public int add(
+    @WebParam(name = "i", targetNamespace = "")
+    int i,
+    @WebParam(name = "j", targetNamespace = "")
+    int j);
+    
+    
+====================================
+<message name="add"> <part name="parameters" element="tns:add"></part> </message>
+    
+    
+====================================
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "add", propOrder = {
+    "i",
+    "j"
+})
+public class Add {
+    protected int i;
+    protected int j;
+    //getters and setters omitted
+    
+    
+====================================
+<xs:complexType name="add">
+<xs:sequence>
+<xs:element name="i" type="xs:int"></xs:element>
+<xs:element name="j" type="xs:int"></xs:element>
+</xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+  style="document"></soap:binding>
+<operation name="add">
+<soap:operation soapAction=""></soap:operation>
+<input>
+<soap:body use="literal"></soap:body>
+</input>
+    
+    
+====================================
+Example: CalculatorInvoker.java will invoke the generated service
+          endpoint code
+
+import org.me.calculator.*;
+
+public class CalculatorInvoker {
+  public static void main(String... arg) {
+
+    CalculatorWSService service = new CalculatorWSService();
+    CalculatorWS port = service.getCalculatorWSPort();
+
+    int result = port.add(2, 3);
+
+    System.out.println("Result: " + result);
+  }
+}
+    
+    
+====================================
+>javac -cp . CalculatorInvoker.java
+    
+    
+====================================
+>java -cp . CalculatorInvoker
+Result: 5
+    
+    
+====================================
+Example: Catalog.java Defines the Service Interface
+
+package com.soacookbook.ch03;
+
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+
+/**
+ * Public interface for CatalogWS impl.
+ */
+@WebService(targetNamespace="http://ns.soacookbook.com")
+public interface Catalog {
+
+    @WebMethod
+    @WebResult(name="title")
+    String getTitle(
+        @WebParam(name="id") String id);
+
+}
+    
+    
+====================================
+Example: CatalogWS.java Implements the Service Interface
+
+package com.soacookbook.ch03;
+
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+import org.apache.log4j.Logger;
+
+/**
+ * This annotation will produce a WSDL URL of:
+ * http://localhost:8080/soaCookbookWS/CatalogService?wsdl
+ * That's because it is in the web context of "soaCookbookWS",
+ * which is the WAR name, appended with the value of the 
+ * serviceName property. 
+ * 
+ * Use that value in the properties file to generate client
+ * artifacts.
+ */
+@WebService(serviceName="CatalogService", name="Catalog",
+    targetNamespace="http://ns.soacookbook.com")
+public class CatalogWS implements Catalog {
+    private static final Logger LOGGER = 
+            Logger.getLogger(CatalogWS.class);
+            
+    @WebMethod
+    public @WebResult(name="title") String 
+            getTitle(
+            @WebParam(name="id") String id)  {
+        
+        if ("12345".equals(id)) return "Hamlet";
+        if ("98765".equals(id)) return "King Lear";
+        if ("55555".equals(id)) return "Macbeth";
+            
+        return "--Item not in catalog--";
+    }
+    
+    public CatalogWS() { }
+}
+    
+    
+====================================
+Example: InjectionServlet.java Uses @WebServiceRef to Refer to a Web
+        Service
+
+public class InjectionServlet extends HttpServlet {
+       
+    @WebServiceRef(type=Catalog.class)
+    private CatalogService service;
+
+    protected void processRequest(HttpServletRequest request, 
+        HttpServletResponse response)
+        throws ServletException, IOException {
+        
+        response.setContentType("text/html;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+        
+        //service instance injected...
+        Catalog port = service.getCatalogPort();
+        String title = port.getTitle("12345");
+                
+        try {
+            out.println("<html>");
+            out.println("<head>");
+            out.println("<title>WebServiceRef Test</title>");  
+            out.println("</head>");
+            out.println("<body>");
+            out.println("<h1>Title= " + title  + "</h1>");
+            out.println("</body>");
+            out.println("</html>");
+            
+        } finally { 
+            out.close();
+        }
+    } 
+}
+    
+    
+====================================
+CatalogService svc = new CatalogService();
+Catalog port = svc.getCatalogPort();
+                
+return port.getTitle("12345");
+    
+    
+====================================
+Example: Invoking a Web Service from a JSP
+
+<%@page import="com.soacookbook.client.CatalogServiceSN,
+  com.soacookbook.client.CatalogService" 
+  contentType="text/html" pageEncoding="UTF-8"%>
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+    <head><title>JSP Client</title></head>
+    <body>
+        <h2>Catalog Service Client</h2> 
+ <%
+    try {
+      CatalogServiceSN service = new CatalogServiceSN();
+      CatalogService port = service.getCatalogPort();
+
+      String id = "98765";
+      String result = port.getTitle(id);
+      out.println("Result for ID 98765= "+result);
+    } catch (Exception ex) {
+        //...
+    }
+  %>
+    
+    </body>
+</html>
+    
+    
+====================================
+@WebService(serviceName="CatalogService", name="Catalog", 
+    targetNamespace="http://ns.soacookbook.com/ws/catalog")
+@Stateless
+@Local
+public class CatalogEJB { 
+
+    @WebMethod
+    @SOAPBinding(style=SOAPBinding.Style.DOCUMENT,
+        use=SOAPBinding.Use.LITERAL, 
+        parameterStyle=SOAPBinding.ParameterStyle.BARE)
+    public @WebResult(name="searchResults",
+            targetNamespace="http://ns.soacookbook.com/catalog") SearchResults
+            authorSearch(
+            @WebParam(name="author",
+            targetNamespace="http://ns.soacookbook.com/catalog") Author author)
+
+//... 
+
+}
+    
+    
+====================================
+@Test
+ 
+    
+    
+====================================
+Iterator<QName> it = service.getPorts();
+while (it.hasNext()){
+    QName i = it.next();
+}
+    
+    
+====================================
+Example: Maven 2 POM Using the JAX-WS Plugin
+
+<build>
+    <plugins>
+       <plugin>
+           <groupId>org.codehaus.mojo</groupId>
+           <artifactId>jaxws-maven-plugin</artifactId>
+           <version>1.9</version>
+           <executions>
+                <execution>
+                    <goals>
+                        <goal>wsimport</goal>
+                    </goals>
+                </execution>
+           </executions>
+           <configuration>
+               <packageName>com.example</packageName>
+               <wsdlUrls>
+                   <wsdlUrl>${my.wsdl.url}</wsdlUrl>
+               </wsdlUrls>
+               <verbose>true</verbose>
+           </configuration>
+       </plugin>
+//...
+    
+    
+====================================
+<mirrors>
+    <mirror>
+        <id>my-internal</id>
+        <mirrorOf>*</mirrorOf>
+        <url>http://repo.example.com/archiva/repository/internal</url>
+        <name>My - Archiva</name>
+    </mirror>
+</mirrors>
+    
+    
+====================================
+<profilesXml xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+      http://maven.apache.org/xsd/profiles-1.0.0.xsd">
+<profiles>
+  <profile>
+    <id>development</id>
+    <properties>
+      <my.sigcap.wsdl.url>
+        http://localhost:8080/myProject/SomeService?wsdl
+      </my.sigcap.wsdl.url>
+    </properties>
+  </profile>
+  //...other profiles
+</profiles>
+    
+    
+====================================
+You are running on JDK6 which comes with JAX-WS 2.0 API, 
+but this tool requires JAX-WS 2.1 API. Use the endorsed standards override mechanism 
+(http://java.sun.com/javase/6/docs/technotes/guides/standards/), or use -Xendorsed option.
+    
+    
+====================================
+JAX-WS RI 2.1.1 in JDK 6
+
+    
+    
+====================================
+JAX-WS RI 2.1.3-hudson-390-
+
+    
+    
+====================================
+You are running on JDK6 which comes with JAX-WS 2.0 API, 
+but this tool requires JAX-WS 2.1 API. Use the endorsed standards override mechanism 
+(http://java.sun.com/javase/6/docs/technotes/guides/standards/), or use -Xendorsed option.
+    
+    
+====================================
+taskdef A class needed by class com.sun.tools.ws.ant.WsImport cannot
+be found: org/apache/tools/ant/taskdefs/MatchingTask
+    
+    
+====================================
+<message name="usernameHeader">
+    <part name="usernameHeader" element="types:usernameHeader"/>
+</message>
+
+<wsdl:portType name="SecureCatalogPortType">
+    <wsdl:operation name="execute">
+        <wsdl:input message="tns:aRequest"/>
+        <wsdl:output message="tns:aResponse"/>
+    </wsdl:operation>
+</wsdl:portType>
+                
+<wsdl:binding name="SecureCatalogBinding" type="tns:SecureCatalogPortType">
+     <soap:binding style="document" 
+       transport="http://schemas.xmlsoap.org/soap/http"/>
+     <wsdl:operation name="execute">
+        <soap:operation/>
+        <wsdl:input>
+            <soap:body message="tns:aRequest"/>
+            <soap:header message="tns:usernameHeader" part="usernameHeader"/>
+        </wsdl:input>
+        <wsdl:output>
+            <soap:body message="tns:aResponse"/>
+        </wsdl:output>
+    </wsdl:operation>
+</wsdl:binding>
+    
+    
+====================================
+public String execute(String arg0)
+    
+    
+====================================
+public String execute(String arg0, String additionalHeader);
+    
+    
+====================================
+<message name="verify">
+<part name="parameters" element="tns:verify"></part>
+<part name="username" element="tns:username"></part>
+<part name="password" element="tns:password"></part>
+</message>
+
+<portType name="EmailCheck">
+<operation name="verify" parameterOrder="parameters username password">
+<input message="tns:verify"></input>
+<output message="tns:verifyResponse"></output>
+</operation>
+</portType>
+
+<binding name="EmailCheckPortBinding" type="tns:EmailCheck">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+  style="document"></soap:binding>
+<operation name="verify">
+<soap:operation soapAction=""></soap:operation>
+<input>
+<soap:body use="literal" parts="parameters"></soap:body>
+<soap:header message="tns:verify" part="username" 
+  use="literal"></soap:header>
+<soap:header message="tns:verify" part="password" 
+  use="literal"></soap:header>
+</input>
+<output>
+<soap:body use="literal" parts="result"></soap:body>
+<soap:header message="tns:verifyResponse" part="username" 
+  use="literal"></soap:header>
+<soap:header message="tns:verifyResponse" part="password" 
+  use="literal"></soap:header>
+</output>
+</operation>
+</binding>
+
+<service name="EmailCheckService">
+<port name="EmailCheckPort" binding="tns:EmailCheckPortBinding">
+<soap:address location="http://localhost:8080/TestHeaders/EmailCheckService">
+</soap:address>
+</port>
+</service>
+</definitions>
+    
+    
+====================================
+public String verify(
+    @WebParam(mode=WebParam.Mode.IN, 
+        name="email")String email, 
+    @WebParam(mode=WebParam.Mode.INOUT, header=true, 
+        name="username") Holder<String> username,
+    @WebParam(mode=WebParam.Mode.INOUT, header=true,
+        name="password") Holder<String> password){
+    
+    
+====================================
+-Dcom.sun.xml.ws.transport.http.client.HttpTransportPipe.dump=true
+    
+    
+====================================
+---[HTTP request]---
+SOAPAction: ""
+Accept: text/xml, multipart/related, text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Content-Type: text/xml;charset="utf-8"
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+<ns2:username xmlns:ns2="http://soacookbook.com/">eben</ns2:username>
+<ns2:password xmlns:ns2="http://soacookbook.com/">secret</ns2:password>
+</S:Header>
+<S:Body>
+<ns2:verify xmlns:ns2="http://soacookbook.com/">
+<email>me@example.com</email></ns2:verify>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+<wsdl:definitions xmlns:s1="http://ws.strikeiron.com" 
+  xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+  xmlns:s="http://www.w3.org/2001/XMLSchema" 
+  xmlns:si="http://www.strikeiron.com" 
+  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
+  xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" 
+  xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" 
+  targetNamespace="http://www.strikeiron.com" 
+  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:types>
+        //...all types omitted for brevity
+  </wsdl:types>    
+
+  <wsdl:message name="AddressToAddressDistanceSoapIn">
+    <wsdl:part name="parameters" element="si:AddressToAddressDistance" />
+  </wsdl:message>
+  <wsdl:message name="AddressToAddressDistanceSoapOut">
+    <wsdl:part name="parameters" element="si:AddressToAddressDistanceResponse" />
+  </wsdl:message>
+  <wsdl:message name="AddressToAddressDistanceResponseInfo">
+    <wsdl:part name="ResponseInfo" element="si:ResponseInfo" />
+  </wsdl:message>
+  <wsdl:message name="GetRemainingHitsSoapIn">
+    <wsdl:part name="parameters" element="s1:GetRemainingHits" />
+  </wsdl:message>
+  <wsdl:message name="GetRemainingHitsSoapOut">
+    <wsdl:part name="parameters" element="s1:GetRemainingHitsResponse" />
+  </wsdl:message>
+  <wsdl:message name="LicenseInfoMessage">
+    <wsdl:part name="LicenseInfo" element="s1:LicenseInfo" />
+  </wsdl:message>
+  <wsdl:message name="SubscriptionInfoMessage">
+    <wsdl:part name="SubscriptionInfo" element="s1:SubscriptionInfo" />
+  </wsdl:message>
+
+  <wsdl:portType name="AddressDistanceCalculatorSoap">
+    <wsdl:operation name="AddressToAddressDistance">
+      <wsdl:input message="si:AddressToAddressDistanceSoapIn" />
+      <wsdl:output message="si:AddressToAddressDistanceSoapOut" />
+    </wsdl:operation>
+    <wsdl:operation name="GetRemainingHits">
+      <wsdl:input message="si:GetRemainingHitsSoapIn" />
+      <wsdl:output message="si:GetRemainingHitsSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="AddressDistanceCalculatorSoap" 
+        type="si:AddressDistanceCalculatorSoap">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document" />
+
+    <wsdl:operation name="AddressToAddressDistance">
+      <soap:operation soapAction="http://www.strikeiron.com/AddressToAddressDistance" 
+        style="document" />
+      <wsdl:input>
+        <soap:body use="literal" />
+        <soap:header message="si:LicenseInfoMessage" part="LicenseInfo" 
+                use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+        <soap:header message="si:AddressToAddressDistanceResponseInfo" 
+                part="ResponseInfo" use="literal" />
+        <soap:header message="si:SubscriptionInfoMessage" 
+                part="SubscriptionInfo" use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="GetRemainingHits">
+      <soap:operation soapAction="http://ws.strikeiron.com/StrikeIron/
+        AddressDistanceCalculator/GetRemainingHits" />
+      <wsdl:input>
+        <soap:body use="literal" />
+        <soap:header message="si:LicenseInfoMessage" 
+          part="LicenseInfo" use="literal" />
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal" />
+        <soap:header message="si:SubscriptionInfoMessage" 
+                part="SubscriptionInfo" use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="AddressDistanceCalculator">
+    <wsdl:port name="AddressDistanceCalculatorSoap" 
+        binding="si:AddressDistanceCalculatorSoap">
+      <soap:address 
+        location="http://ws.strikeiron.com/StrikeIron/AddressDistanceCalculator" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
+    
+    
+====================================
+Example: Setting a Complex Object into a SOAP Header with JAXB and
+          Headers.create
+
+package headersclientsiaddress;
+
+import com.sun.xml.ws.api.message.Headers;
+import com.sun.xml.ws.developer.WSBindingProvider;
+import javax.xml.namespace.QName;
+
+import com.strikeiron.*;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.Marshaller;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+/**
+ * Creates a compound object (License) generated by JAX-WS as 
+ * a JAXB object so we can marshall it into XML to attach as
+ * a SOAP header before invoking service.  
+ */
+public class Main {
+  public static void main(String... args) {
+    try { 
+        //instantiate JAX-WS service object and its port
+        AddressDistanceCalculator service = 
+                new AddressDistanceCalculator();
+        AddressDistanceCalculatorSoap port = 
+                service.getAddressDistanceCalculatorSoap();           
+
+        //After registering, use your values here.
+        RegisteredUser registeredUser = new RegisteredUser();
+        registeredUser.setUserID("eben@example.com");
+        registeredUser.setPassword("secret");
+        
+        LicenseInfo licenseInfo = new LicenseInfo();
+        licenseInfo.setRegisteredUser(registeredUser);
+
+        //setup a context to marshall our license header info
+        JAXBContext jaxbContext = JAXBContext.newInstance(
+                LicenseInfo.class);
+        
+        Marshaller marshaller = jaxbContext.createMarshaller();
+        marshaller.setProperty(Marshaller.JAXB_ENCODING, "UTF-8");
+        marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+
+        //must do this because LicenseInfo is not a root element
+        QName q = new QName("http://ws.strikeiron.com", 
+                "LicenseInfo");
+        //set up the license as XML so we can attach as header
+        JAXBElement<LicenseInfo> jaxbLicense = 
+                new JAXBElement<LicenseInfo>(
+                q, LicenseInfo.class,licenseInfo);
+
+        //set up a parser to hold the XML result of marshalling 
+        javax.xml.parsers.DocumentBuilderFactory dbf = 
+                DocumentBuilderFactory.newInstance();
+        
+        //this will store the XML result after marshalling
+        org.w3c.dom.Document doc = 
+                dbf.newDocumentBuilder().newDocument();
+        
+        //turn our JAX-WS object into XML
+        marshaller.marshal(jaxbLicense, doc);
+
+        //JAX-WS RI Only--downcast
+        WSBindingProvider bp = (WSBindingProvider)port;
+        
+        //use RI convenience method to create header
+        //using the Document object
+        bp.setOutboundHeaders(
+            Headers.create(doc.getDocumentElement()));
+
+        //Starting address bean
+        AddressInput location1 = new AddressInput();
+        location1.setAddress1("10 Columbus Circle");
+        location1.setCityStateZip("New York,NY,10019");
+        location1.setCountry(CountryCode.US);
+
+        //End address bean
+        AddressInput location2 = new AddressInput();
+        location2.setAddress1("301 Park Avenue");
+        location2.setCityStateZip("New York,NY,10022");
+        location2.setCountry(CountryCode.US);
+
+        UnitOfMeasure unitOfMeasure = UnitOfMeasure.MILES;
+
+        //make the call--no explicit headers
+        double result = port.addressToAddressDistance(
+                location1, location2, unitOfMeasure);
+        
+        //show result
+        System.out.println("Distance: " + result);
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+}
+}
+
+    
+    
+====================================
+---[HTTP request]---
+SOAPAction: "http://www.strikeiron.com/AddressToAddressDistance"
+Accept: text/xml, multipart/related, text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Content-Type: text/xml;charset="utf-8"
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+  <LicenseInfo xmlns="http://ws.strikeiron.com">
+    <RegisteredUser>
+    <UserID>eben@example.com</UserID>
+    <Password>secret</Password>
+    </RegisteredUser>
+  </LicenseInfo>
+</S:Header>
+
+<S:Body>
+    <ns2:AddressToAddressDistance xmlns="http://ws.strikeiron.com" 
+     xmlns:ns2="http://www.strikeiron.com">
+        <ns2:Location1>
+          <ns2:address1>10 Columbus Circle</ns2:address1>
+          <ns2:city_state_zip>New York,NY,10019</ns2:city_state_zip>
+          <ns2:country>US</ns2:country></ns2:Location1>
+          <ns2:Location2><ns2:address1>301 Park Avenue</ns2:address1>
+          <ns2:city_state_zip>New York,NY,10022</ns2:city_state_zip>
+          <ns2:country>US</ns2:country>
+        </ns2:Location2>
+        <ns2:UnitOfMeasure>Miles</ns2:UnitOfMeasure>
+    </ns2:AddressToAddressDistance>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+---[HTTP response 200]---
+null: HTTP/1.1 200 OK
+Cache-control: private
+Content-type: text/xml; charset=utf-8
+Content-length: 1009
+X-powered-by: ASP.NET
+Server: Microsoft-IIS/6.0
+Date: Mon, 07 Jul 2008 00:33:18 GMT
+X-aspnet-version: 1.1.4322
+
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+
+  <soap:Header>
+    <ResponseInfo xmlns="http://www.strikeiron.com">
+      <ResponseCode>0</ResponseCode>
+      <Response>Success</Response>
+    </ResponseInfo>
+    <SubscriptionInfo xmlns="http://ws.strikeiron.com">
+      <LicenseStatusCode>0</LicenseStatusCode>
+      <LicenseStatus>Valid license key</LicenseStatus>
+      <LicenseActionCode>0</LicenseActionCode>
+      <LicenseAction>Decremented hit count</LicenseAction>
+      <RemainingHits>24</RemainingHits>
+      <Amount>0</Amount>
+    </SubscriptionInfo>
+  </soap:Header>
+
+  <soap:Body>
+    <AddressToAddressDistanceResponse xmlns="http://www.strikeiron.com">
+      <AddressToAddressDistanceResult>
+            1.0286261980640472
+      </AddressToAddressDistanceResult>
+    </AddressToAddressDistanceResponse>
+  </soap:Body>
+</soap:Envelope>--------------------
+
+Distance: 1.0286261980640472
+
+    
+    
+====================================
+Example: SaveMessageHandler.java
+
+package com.soacookbook.ch03.handler;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import static java.lang.System.out;
+
+import java.io.IOException;
+import java.util.Set;
+import javax.xml.namespace.QName;
+import javax.xml.soap.SOAPException;
+import javax.xml.ws.handler.MessageContext;
+import javax.xml.ws.handler.soap.SOAPHandler;
+import javax.xml.ws.handler.soap.SOAPMessageContext;
+import org.apache.log4j.Logger;
+
+public class SaveMessageHandler implements 
+                SOAPHandler<SOAPMessageContext> {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(SaveMessageHandler.class);
+    
+    public boolean handleMessage(SOAPMessageContext ctx) {
+        LOGGER.debug("Handling SOAP MESSAGE.");
+            
+        //determine if the message is coming or going
+        Boolean outbound = (Boolean)
+            ctx.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY);
+        
+        //different file name for request and response
+        String msgFileName = "";
+        //auto-unbox
+        if (outbound) {
+            LOGGER.debug("Message is OUTBOUND"); 
+            msgFileName = "outMsg.xml";
+        } else {
+            LOGGER.debug("Message is INBOUND");
+            msgFileName = "inMsg.xml";
+        }
+        
+        try {
+            //do business logic here. We'll just log msg to file
+            LOGGER.debug("Logging....\n");
+            String dirName = "/tmp";                 
+            File logFile = new File(dirName, msgFileName);
+            logFile.createNewFile();
+            FileOutputStream fos = new FileOutputStream(logFile);
+            ctx.getMessage().writeTo(fos);
+            fos.close();
+            
+            LOGGER.debug("Log complete.");         
+        } catch (SOAPException ex) {
+            LOGGER.error("SOAP Exception--", ex);
+        } catch (IOException ex) {
+            LOGGER.error("IO Exception--", ex);
+        }
+
+        LOGGER.debug("Exiting handler normally.");
+        //indicate that we want to continue processing
+        return true;
+    }
+
+    public boolean handleFault(SOAPMessageContext ctx) {
+        LOGGER.error("SOAP FAULT! Quitting.");
+        return false;
+    }
+
+    public void close(MessageContext ctx) {
+        LOGGER.debug("Closing handler.");
+    }
+    
+    public Set<QName> getHeaders() {
+        return null;
+    }
+    
+}
+
+    
+    
+====================================
+Example: HelloHandlerResolver.java
+
+package com.soacookbook.ch03.handler;
+
+import java.util.ArrayList;
+import java.util.List;
+import javax.xml.ws.handler.Handler;
+import javax.xml.ws.handler.HandlerResolver;
+import javax.xml.ws.handler.PortInfo;
+import org.apache.log4j.Logger;
+
+public class HelloHandlerResolver implements HandlerResolver {
+    private static final Logger LOGGER = 
+            Logger.getLogger(HelloHandlerResolver.class);
+    
+    private final List<Handler> chain;
+    
+    //constructor. we'll set up chain here.
+    public HelloHandlerResolver() { 
+        chain = new ArrayList<Handler>();
+        chain.add(new SaveMessageHandler());
+    }
+
+    public List<Handler> getHandlerChain(PortInfo portInfo) {
+        LOGGER.debug("Returning handler chain...");
+        return chain;
+    }
+}
+    
+    
+====================================
+Example: TestHandler.java
+
+package com.soacookbook.ch03.test;
+
+import static org.junit.Assert.*;
+
+import com.soacookbook.ch03.*;
+import com.soacookbook.ch03.handler.HelloHandlerResolver;
+import com.soacookbook.ns.bin.*;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+
+import java.io.*;
+
+/**
+ * Tests that the handler is called on an invocation to 
+ * a service operation.
+ */
+public class HandlerTest {
+    private static final Logger LOGGER = 
+            Logger.getLogger(HandlerTest.class);
+
+    private String name;
+    
+    public HandlerTest() { 
+        name = "Eben";
+    }
+
+    @Test
+    public void testHandler(){
+        HelloWSService service = new HelloWSService();
+
+        //Set handler resolver into service.
+        service.setHandlerResolver(new HelloHandlerResolver());
+
+        // Get the Hello stub
+        Hello hello = service.getHelloWSPort();
+        
+        //Invoke the business method
+        String result = hello.sayHello(name);
+        
+        assertEquals("Hello, " + name + "!", result);
+
+        //Now go check your log file to see if handler worked.
+      }
+}
+    
+    
+====================================
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<ns2:sayHello xmlns:ns2="http://ch03.soacookbook.com/">
+<arg0>Eben</arg0>
+</ns2:sayHello>
+</S:Body></S:Envelope>
+    
+    
+====================================
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header/><S:Body>
+<ns2:sayHelloResponse xmlns:ns2="http://ch03.soacookbook.com/">
+<return>Hello, Eben!</return>
+</ns2:sayHelloResponse>
+</S:Body></S:Envelope>
+    
+    
+====================================
+********** HEADERS:
+List of headers for Transfer-encoding: [chunked]
+List of headers for null: [HTTP/1.1 200 OK]
+List of headers for Content-type: [text/xml;charset="utf-8"]
+List of headers for Server: [Sun Java System Application Server 9.1_01]
+List of headers for X-powered-by: [Servlet/2.5]
+List of headers for Date: [Thu, 15 May 2008 17:02:12 GMT]
+********** RESPONSE CODE: 200
+********** ATTACH: {}
+    
+    
+====================================
+@Test
+public void testMessageContext(){
+    HelloWSService service = new HelloWSService();
+
+    //Set handler resolver into service.
+    service.setHandlerResolver(new MultipleHandlerResolver());
+
+    // Get the Hello stub
+    Hello hello = service.getHelloWSPort();
+        
+    //Invoke the business method
+    String result = hello.sayHello(name);
+        
+    assertEquals("Hello, " + name + "!", result);
+.
+}
+    
+    
+====================================
+public class MultipleHandlerResolver implements HandlerResolver {
+    private static final Logger LOGGER = 
+            Logger.getLogger(MultipleHandlerResolver.class);
+    
+    private final List<Handler> chain;
+    
+    //constructor. we'll set up chain here.
+    public MultipleHandlerResolver() { 
+        chain = new ArrayList<Handler>();
+        chain.add(new SetVersionHandler());
+        chain.add(new VersionInstructionsHandler());
+    }
+//...
+    
+    
+====================================
+Example: SetVersionHandler.java
+
+package com.soacookbook.ch03.handler;
+
+import static java.lang.System.out;
+
+import java.util.Set;
+import javax.xml.namespace.QName;
+import javax.xml.ws.handler.MessageContext;
+import javax.xml.ws.handler.soap.SOAPHandler;
+import javax.xml.ws.handler.soap.SOAPMessageContext;
+import org.apache.log4j.Logger;
+
+public class SetVersionHandler implements 
+                SOAPHandler<SOAPMessageContext> {
+
+    private static final Logger LOGGER =
+            Logger.getLogger(SetVersionHandler.class);
+    
+    public boolean handleMessage(SOAPMessageContext ctx) {
+        LOGGER.debug("Handling SOAP MESSAGE.");
+            
+        //determine if the message is coming or going
+        final Boolean outbound = (Boolean)
+            ctx.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY);
+        
+        if (outbound){
+            ctx.put("SVC-VERSION", "1.0");
+        }       
+        return true;
+    }
+
+    public boolean handleFault(SOAPMessageContext ctx) {
+        LOGGER.error("SOAP FAULT! Handle here...");
+        return false;
+    }
+
+    public void close(MessageContext ctx) {
+        LOGGER.debug("Closing handler.");
+    }
+    
+    public Set<QName> getHeaders() {
+        return null;
+    }  
+}
+    
+    
+====================================
+Example: 
+
+public class VersionInstructionsHandler implements 
+                SOAPHandler<SOAPMessageContext> {
+
+public boolean handleMessage(SOAPMessageContext ctx) {
+        LOGGER.debug("Handling SOAP MESSAGE.");
+            
+        //determine if the message is coming or going
+        final Boolean outbound = (Boolean)
+            ctx.get(MessageContext.MESSAGE_OUTBOUND_PROPERTY);
+        
+        //is message incoming?
+        if (outbound) {
+            
+            //get the language from context
+            final String version = (String)ctx.get("SVC-VERSION");
+            
+            LOGGER.debug("Service Version: " + version);
+            
+            
+            //if the version is 1.0, give user instructions
+            //for upgrading to coming version.
+            if ("1.0".equals(version)) {
+                try {
+                SOAPMessage msg = ctx.getMessage();
+                SOAPBody body = msg.getSOAPBody();
+                SOAPElement content = 
+                        (SOAPElement)body.getFirstChild();
+                String value = content.getTextContent();      
+                
+                LOGGER.debug("Print value: " + value);
+                
+                //because version is old, attach instructions
+                //for migrating to new version
+                
+                //Create SOAP attachment
+                AttachmentPart ap = msg.createAttachmentPart();
+                String s = "Client will support JMS in " +
+                        "version 1.5.";
+                ap.setContent(s, "text/plain");
+                ap.setContentId("Version-1.5-Notice");
+                msg.addAttachmentPart(ap);
+                                
+                LOGGER.debug("Attachment added.");
+                
+                } catch (Exception ex) {
+                    LOGGER.error("Problem.", ex);
+                }
+            }
+        }        
+        return true;
+    }
+//...
+    
+    
+====================================
+Example: Outbound SOAP Message with Attachment
+
+---[HTTP request]---
+SOAPAction: ""
+Accept: text/xml, multipart/related, text/html, 
+image/gif, image/jpeg, *; q=.2, */*; q=.2
+Content-Type: multipart/related; type="text/xml"; 
+boundary="uuid:002fa642-b700-47c4-a298-ed1e1fb03795"
+--uuid:002fa642-b700-47c4-a298-ed1e1fb03795
+Content-Type: text/xml
+
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<ns2:sayHello xmlns:ns2="http://ch03.soacookbook.com/">
+<arg0 xmlns="">Eben</arg0>
+</ns2:sayHello></S:Body>
+</S:Envelope>
+--uuid:002fa642-b700-47c4-a298-ed1e1fb03795
+Content-Id:<Version-1.5-Notice>
+Content-Type: text/plain
+Content-Transfer-Encoding: binary
+
+Client will support JMS in version 1.5.
+--uuid:002fa642-b700-47c4-a298-ed1e1fb03795
+    
+    
+====================================
+Example: Binary Data Method
+
+@WebMethod
+public @WebResult(name="imageResponse",
+    targetNamespace="http://ns.soacookbook.com/ch03") 
+    byte[] 
+    getImage(
+    @WebParam(name="imageRequest", 
+    targetNamespace="http://ns.soacookbook.com/ch03")
+    String imageId) {
+        
+    //Use the passed ID to find this instance in the database
+    //This is our fake image data...
+    byte[] imageBytes = {1,0};
+
+    //If you want to save your image data to a database,
+    //create a PreparedStatement and use:
+    ...
+    ps.setBinaryStream(1, 
+        new ByteArrayInputStream(sigImageData), imageBytes.length);
+        
+    return imageBytes;
+}
+    
+    
+====================================
+@WebMethod
+@SOAPBinding(parameterStyle=SOAPBinding.ParameterStyle.WRAPPED)
+public @WebResult(name="putResponse",
+        targetNamespace="http://ns.soacookbook.com/bin") 
+        String 
+        put(
+        @WebParam(name="putData", 
+        targetNamespace="http://ns.soacookbook.com/bin") 
+        byte[] binaryData) {
+    
+    
+====================================
+<xs:element name="put" type="tns:put"></xs:element>
+<xs:complexType name="put">
+  <xs:sequence>
+    <xs:element name="putData" type="xs:base64Binary" 
+      form="qualified" nillable="true" minOccurs="0" />
+  </xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+Example: BinaryDataTest.java
+
+package com.soacookbook.ch03.test;
+
+import static org.junit.Assert.*;
+
+import com.soacookbook.ns.bin.*;
+import org.apache.log4j.Logger;
+import org.junit.Test;
+
+import java.io.*;
+/**
+ * Tests the BinaryData service.
+ */
+public class BinaryDataTest {
+    private static final Logger LOGGER = 
+            Logger.getLogger(BinaryDataTest.class);
+
+    private static final String FILE_PATH = 
+            "/home/ehewitt/soacookbook/repository/code/" +
+            "chapters/client/winchesterHouse.jpg";
+    
+    public BinaryDataTest() { }
+    
+    /**
+     * Client has a binary file such as image or PDF it would
+     * like to send to service for storage or processing.
+     * This client reads it in and passes to service, which
+     * generates an ID for it and returns the ID so client
+     * can get back data later if necessary.
+     */
+    @Test
+    public void testPutBinaryData(){
+        LOGGER.debug("");
+        try {
+            BinaryDataService svc = new BinaryDataService();
+            BinaryData port = svc.getBinaryDataPort();
+
+            File f = new File(FILE_PATH);
+            byte[] imageData = getFileAsBytes(f);
+            
+            LOGGER.debug("*** Read in file of bytes: " + 
+                    imageData.length);
+
+            String id = port.put(imageData);
+            
+            LOGGER.debug("Got id returned from service: " + id);
+            
+            assertEquals("007", id);
+        } catch (IOException ex) {
+           fail();
+           ex.printStackTrace();
+        }
+    }
+    
+    // Returns file contents in a byte array.
+    private static byte[] getFileAsBytes(File file) throws IOException {
+        InputStream is = new FileInputStream(file);
+    
+        // Get file size
+        long length = file.length();
+        if (length > Integer.MAX_VALUE) {
+            throw new IOException("File is too big to read: " + 
+                    file.getName());
+        }
+    
+        // Create the byte array to hold the data
+        byte[] bytes = new byte[(int)length];
+    
+        // Read the bytes in
+        int offset = 0;
+        int numRead = 0;
+        while (offset < bytes.length
+               && (numRead=is.read(bytes, offset, 
+                    bytes.length-offset)) >= 0) {
+            offset += numRead;
+        }
+    
+        // Make sure we read all bytes
+        if (offset < bytes.length) {
+            throw new IOException("Could not read file " + 
+                    file.getName());
+        }
+    
+        is.close();
+        return bytes;
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<put xmlns="http://ns.soacookbook.com/bin">
+<putData>/9j/4AAQSkZJRgABAgEBLAEsAAD/4RFdRXhpZgAATU0AKgAAAAgABwE
+SAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAE
+xAAIAAAAUAAAAcgEyAAIAAAAUAAAAhodpAAQAAAABAAAAnAAAAMgAAAEsAAAAAQA
+AASwAAAABQWRvYmUgUGhvdG9zaG9wIDcuD2qDO1Kt9Vv+Cr7f0fyvp11DwJ//9k=
+//....
+
+</putData>
+</put>
+</S:Body>
+</S:Envelope
+    
+    
+====================================
+Example: Generated Web Service Client
+
+@WebEndpoint(name = "CatalogPort")
+public Catalog getCatalogPort() {
+    return super.getPort(new QName("http://ns.soacookbook.com", 
+           "CatalogPort"), Catalog.class);
+}
+
+@WebEndpoint(name = "CatalogPort")
+public Catalog getCatalogPort(WebServiceFeature... features) {
+    return super.getPort(new QName("http://ns.soacookbook.com", 
+            "CatalogPort"), Catalog.class, features);
+}
+    
+    
+====================================
+SignatureCapture port = null;
+        
+try {
+  final SigCapService service = 
+           new SigCapService(wsdlLocation, QNAME);
+            
+  port = service.getSignatureCapturePort(
+           new AddressingFeature(),
+           new SchemaValidationFeature(
+             SigCapClientValidationHandler.class));
+
+//invoke service...
+    
+    
+====================================
+Example: Validation Handler Implementation
+
+import com.sun.xml.ws.developer.ValidationErrorHandler;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.SAXException;
+import org.apache.log4j.Logger;
+
+/**
+ * The error handler that catches validation problems against 
+ * the schema. 
+ *
+ * @author ehewitt
+ * @author bmericle
+ */
+public final class SigCapClientValidationHandler 
+        extends ValidationErrorHandler {
+    
+    private static final Logger LOGGER = 
+      Logger.getLogger(SigCapClientValidationHandler.class);
+
+    public SigCapClientValidationHandler() {
+        LOGGER.debug("Schema Validation Handler created.");
+    }
+    
+    @Override
+    public void warning(final SAXParseException e) throws SAXException {
+        LOGGER.warn("Schema Validation Warning: " + 
+          e.getLocalizedMessage());
+        // Store warnings in the packet so that they can be retrieved 
+        //from the endpoint
+        packet.invocationProperties.put("Schema Validation Warning.", e);
+        throw e;
+    }
+
+    @Override
+    public void error(final SAXParseException e) throws SAXException {
+        LOGGER.error("Schema Validation Error: " + e.getLocalizedMessage());
+        throw e;
+    }
+
+    @Override
+    public void fatalError(final SAXParseException e) throws SAXException {
+        LOGGER.warn("Schema Validation Fatal Error: " + 
+          e.getLocalizedMessage());
+        throw e;
+    }
+}
+    
+    
+====================================
+<dependency>
+  <groupId>com.sun.xml.ws</groupId>
+  <artifactId>webservices-rt</artifactId>
+  <version>1.3</version>
+  <scope>compile</scope>
+</dependency>
+        
+<dependency>
+  <groupId>javax.xml</groupId>
+  <artifactId>webservices-api</artifactId>     
+  <version>1.3</version>
+  <scope>compile</scope>
+</dependency>
+    
+    
+====================================
+Example: Custom JAX-WS Binding to Enable Asynchronous Operations
+
+<bindings
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    wsdlLocaption="http://localhost:8080/soaCookbookWS/SoaCookbookService?wsdl"
+    xmlns="http://java.sun.com/xml/ns/jaxws">
+    <bindings node="wsdl:definitions">
+        <package name="com.soacookbook.ch03"/>
+        <enableAsyncMapping>true</enableAsyncMapping>
+    </bindings>
+</bindings>
+    
+    
+====================================
+<binding dir="..." includes="..." /> 
+    
+    
+====================================
+Example: The wsimport Ant task Including Binding
+        Customizations
+
+<wsimport
+    wsdl="${wsdl.url}"
+    destdir="${gen.classes.dir}"
+    sourcedestdir="${src.gen.dir}"
+    keep="true"
+    extension="false"
+    verbose="true" >
+    <binding dir="${binding.dir}" includes="${binding.file}" />
+</wsimport>
+    
+    
+====================================
+Example: Generated Polling Method
+
+@WebMethod(operationName = "doLongJob")
+@RequestWrapper(localName = "doLongJob", 
+    targetNamespace = "http://ns.soacookbook.com", 
+    className = "com.soacookbook.ns.DoLongJob")
+@ResponseWrapper(localName = "doLongJobResponse", 
+    targetNamespace = "http://ns.soacookbook.com", 
+    className = "com.soacookbook.ns.DoLongJobResponse")
+public Response<DoLongJobResponse> doLongJobAsync(
+    @WebParam(name = "jobName", targetNamespace = "http://ns.soacookbook.com")
+    String jobName);
+
+    
+    
+====================================
+Example: Using Polling to Invoke Operation Asynchronously
+
+package com.soacookbook.ch03;
+
+import java.util.*;
+
+import javax.xml.bind.*;
+import javax.xml.soap.*;
+
+import org.apache.log4j.Logger;
+import com.soacookbook.ns.*;
+import javax.xml.ws.Response;
+
+public class AsynchClient {
+  private static final Logger LOGGER = Logger.getLogger(AsynchClient.class);
+    
+    public String doLongJobPolling(String jobName) throws Exception {
+        LOGGER.debug("Executing.");
+        
+        SoaCookbookService svc = new SoaCookbookService();
+        SoaCookbook port = svc.getSoaCookbookPort();
+        Response<DoLongJobResponse> response = 
+                port.doLongJobAsync(jobName);
+        
+        LOGGER.debug("Invoked service.");
+        while(!response.isDone()){
+          LOGGER.debug("Waiting...");
+          Thread.sleep(1000); //do something
+        }
+        
+        DoLongJobResponse res = response.get();
+        String status = res.getJobDone();
+        
+        LOGGER.debug("Status: " + status);
+        
+        return status;
+    }
+}
+    
+    
+====================================
+Executing.
+Invoked service.
+Waiting...
+Waiting...
+Waiting...
+Waiting...
+Status: Job is done running: My Batch
+    
+    
+====================================
+@WebMethod(operationName = "doLongJob")
+@RequestWrapper(localName = "doLongJob", 
+    targetNamespace = "http://ns.soacookbook.com", 
+    className = "com.soacookbook.ns.DoLongJob")
+@ResponseWrapper(localName = "doLongJobResponse", 
+    targetNamespace = "http://ns.soacookbook.com", 
+    className = "com.soacookbook.ns.DoLongJobResponse")
+public Future<?> doLongJobAsync(
+    @WebParam(name="jobName", targetNamespace="http://ns.soacookbook.com")
+    String jobName,
+    @WebParam(name = "asyncHandler", targetNamespace = "")
+    AsyncHandler<DoLongJobResponse> asyncHandler);
+    
+    
+====================================
+Example: AsyncHandler<T> Implementation
+
+class MyHandler implements AsyncHandler<DoLongJobResponse> {
+  private static final Logger LOGGER = 
+        Logger.getLogger(MyHandler.class);
+
+  private DoLongJobResponse response;
+
+  public void handleResponse(Response<DoLongJobResponse> in) {
+    LOGGER.debug("Executing callback handler.");
+
+    try {
+      response = in.get();
+      LOGGER.debug("Got response! " + 
+                    response.getJobDone());
+
+    } catch (ExecutionException e) {
+        e.printStackTrace();
+    } catch (InterruptedException e) {
+        e.printStackTrace();
+    }
+  }
+
+  public DoLongJobResponse get() {
+    return response;
+  }
+}
+    
+    
+====================================
+Example: Asynchronous Callback Client
+
+public void doLongJobCallback(String jobName) throws Exception {
+    LOGGER.debug("Executing.");
+        
+    SoaCookbookService svc = new SoaCookbookService();
+    SoaCookbook port = svc.getSoaCookbookPort();
+        
+    MyHandler handler = new MyHandler();
+    Future<?> task = port.doLongJobAsync(jobName, handler);
+        
+    LOGGER.debug("Invoked service.");
+        
+    while(!task.isDone()){
+        LOGGER.debug("Waiting...");
+        Thread.sleep(1000); //do something
+    }
+}
+    
+    
+====================================
+AsynchClient.doLongJobCallback - Executing.
+AsynchClient.doLongJobCallback - Invoked service.
+AsynchClient.doLongJobCallback - Waiting...
+AsynchClient.doLongJobCallback - Waiting...
+AsynchClient.doLongJobCallback - Waiting...
+AsynchClient.doLongJobCallback - Waiting...
+MyHandler.handleResponse - Executing callback handler.
+MyHandler.handleResponse - Got response! Job is done running: Some Batch
+    
+    
+====================================
+Example: Setting the Endpoint Address Property
+
+public class ClientServlet extends HttpServlet {
+    @WebServiceRef(wsdlLocation=
+       "http://localhost:8080/CalculatorApp/CalculatorWSService?wsdl")
+    public CalculatorWSService service;
+
+protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+    throws ServletException, IOException {
+
+  org.me.calculator.client.CalculatorWS port = service.getCalculatorWSPort();
+                
+  ((BindingProvider)port).getRequestContext().put(
+    BindingProvider.ENDPOINT_ADDRESS_PROPERTY, 
+    "http://localhost:4933/CalculatorApp/CalculatorWSService?wsdl");
+  
+  int i = Integer.parseInt(request.getParameter("value1"));
+  int j = Integer.parseInt(request.getParameter("value2"));
+
+  int result = port.add(i, j);
+    
+    
+==================

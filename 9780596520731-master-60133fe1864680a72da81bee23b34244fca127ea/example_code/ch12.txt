@@ -1,0 +1,1101 @@
+chapter: Web Service Interoperability
+==================
+...
+<xsd:restriction base="soapenc:Array">
+   <xsd:sequence>
+     <xsd:element name="x" type="xsd:string" 
+       minOccurs="0" maxOccurs="unbounded"/>
+   </xsd:sequence>
+   <xsd:attribute ref="soapenc:arrayType" 
+     wsdl:arrayType="tns:MyArrayType[]"/>
+...
+    
+    
+====================================
+<MyArray soapenc:arrayType="tns:MyArrayType[]">
+  <x>123</x>
+  <x>456</x>
+</MyArray>
+    
+    
+====================================
+<xsd:element name="Books" type="tns:Books"/>
+<xsd:complexType name="Books">
+  <xsd:sequence>
+   <xsd:element name="title" type="xsd:string" 
+    minOccurs="0" maxOccurs="unbounded"/>
+  </xsd:sequence>
+</xsd:complexType>
+    
+    
+====================================
+<Books>
+  <title>Hamlet</title>
+  <title>King Lear</title>
+</Books>
+    
+    
+====================================
+<To xmlns="http://www.w3.org/2005/08/addressing">
+  http://www.w3.org/2005/08/addressing/anonymous
+</To>
+    
+    
+====================================
+import javax.xml.ws.Action;
+import javax.xml.ws.soap.Addressing;
+
+@WebService
+@Addressing
+public class HelloAddressingWS {
+    
+    
+====================================
+@WebMethod
+@Action(
+  input = "http://soacookbook.com/name",
+  output = "http://soacookbook.com/greeting")
+public String sayHello(String name) { ...
+    
+    
+====================================
+<portType name="HelloAddressingWS">
+  <operation name="sayHello">
+    <input wsaw:Action="http://soacookbook.com/name" 
+      message="tns:sayHello"/>
+    <output wsaw:Action="http://soacookbook.com/greeting" 
+      message="tns:sayHelloResponse"/>
+  </operation>
+</portType>
+...
+<binding name="HelloAddressingWSPortBinding" 
+  type="tns:HelloAddressingWS">
+  <wsaw:UsingAddressing/>
+    
+    
+====================================
+@Addressing(required=true)
+    
+    
+====================================
+new MyImplService().getMyImplPort(
+  new javax.xml.ws.AddressingFeature(true)
+);
+    
+    
+====================================
+<S:Header>
+  <FaultDetail xmlns="http://www.w3.org/2005/08/addressing">
+    <ProblemHeaderQName>
+      {http://www.w3.org/2005/08/addressing}Action
+    </ProblemHeaderQName>
+  </FaultDetail>
+</S:Header>
+    
+    
+====================================
+Example: Using the AddressingFeature class with a Port to Enable
+        WS-Addressing in the client
+
+import javax.xml.ws.soap.AddressingFeature;
+
+/**
+ * Calls the WebService with WS-Addressing enabled.
+ */
+public class AddressingClient {
+public static void main(String...args) {
+    try { // Call Web Service Operation
+       HelloAddressingWSService service = new HelloAddressingWSService();
+       
+       //enable WS-Addressing
+       HelloAddressingWS port = 
+               service.getHelloAddressingWSPort(
+                new AddressingFeature());
+       
+       String result = port.sayHello("Eben");
+       System.out.println("Result = "+result);
+    } catch (Exception ex) {
+       ex.printStackTrace();
+    }
+  }
+}
+    
+    
+====================================
+SOAPAction: "http://soacookbook.com/name"
+Content-Type: text/xml;charset="utf-8"
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+<To xmlns="http://www.w3.org/2005/08/addressing">
+  http://localhost:7777/TestWS/HelloAddressingWSService
+</To>
+<Action xmlns="http://www.w3.org/2005/08/addressing">
+  http://soacookbook.com/name
+</Action>
+<ReplyTo xmlns="http://www.w3.org/2005/08/addressing">
+    <Address>
+      http://www.w3.org/2005/08/addressing/anonymous
+    </Address>
+</ReplyTo>
+<MessageID xmlns="http://www.w3.org/2005/08/addressing">
+  uuid:8c5ff38d-6a7b-477e-8558-2b6572f7ba84
+</MessageID>
+</S:Header>
+
+<S:Body>
+<ns2:sayHello xmlns:ns2="http://soacookbook.com/">
+  <arg0>Eben</arg0>
+</ns2:sayHello>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header>
+<To xmlns="http://www.w3.org/2005/08/addressing">
+  http://www.w3.org/2005/08/addressing/anonymous
+</To>
+<Action xmlns="http://www.w3.org/2005/08/addressing">
+  http://soacookbook.com/greeting
+</Action>
+<MessageID xmlns="http://www.w3.org/2005/08/addressing">
+  uuid:5ea13011-8163-4c03-9d86-dd54159d2165
+</MessageID>
+<RelatesTo xmlns="http://www.w3.org/2005/08/addressing">
+  uuid:8c5ff38d-6a7b-477e-8558-2b6572f7ba84
+</RelatesTo>
+</S:Header>
+
+<S:Body>
+  <ns2:sayHelloResponse xmlns:ns2="http://soacookbook.com/">
+    <return>Hello, Eben</return>
+  </ns2:sayHelloResponse>
+</S:Body></S:Envelope>
+    
+    
+====================================
+@Action(output = "http://soacookbook.com/greeting")
+    
+    
+====================================
+<portType name="HelloAddressingWS">
+<operation name="sayHello">
+  <input wsaw:Action="http://soacookbook.com/name" 
+    message="tns:sayHello"/>
+  <output wsaw:Action="http://soacookbook.com/greeting" 
+    message="tns:sayHelloResponse"/>
+</operation>
+</portType>
+    
+    
+====================================
+new MyImplService().getMyImplPort(
+  new javax.xml.ws.AddressingFeature(false)
+);
+    
+    
+====================================
+<definitions name="AddNumbers"...
+  xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl">
+...
+<operation name="doWork">
+  <input message="tns:doWork" wsaw:Action="workIn"/>
+  <output message="tns:doWorkResponse" wsaw:Action="workOut"/>
+  <fault name="doWorkFault" message="tns:workFault" 
+    wsaw:Action="doWorkFault"/>
+</operation>
+
+<binding name="MyServiceBinding" type="tns:MyPortType">
+  <wsaw:UsingAddressing wsdl:required="false" />
+  <soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document" />
+    
+    
+====================================
+Example: The Web Service that uses Addressing on Faults
+
+package com.soacookbook;
+
+import javax.jws.*;
+import javax.xml.ws.Action;
+import javax.xml.ws.FaultAction;
+import javax.xml.ws.soap.Addressing;
+
+/**
+ * Shows a class that uses WS-Addressing, including
+ * a Fault that is Addressing enabled.
+ */
+@WebService
+@Addressing(required=true)
+public class HelloAddressingFaultsWS {
+
+  @WebMethod
+  @Action(
+    input="http://soacookbook.com/name",
+    output="http://soacookbook.com/greeting", 
+    fault={ 
+      @FaultAction(className=HelloException.class, 
+        value="http://soacookbook.com/myFault")})
+  public String sayHello(String name) throws HelloException {
+    
+    if (name == null || "".equals(name)) {
+      throw new HelloException("The name was null or empty.");
+    }
+    return "Hello, " + name;
+  }
+}
+    
+    
+====================================
+Example: Exception that is Addressed using FaultAction in web
+        service
+
+package com.soacookbook;
+
+public class HelloException extends Exception {
+  public HelloException(String msg){
+    super("Could not say hello: " + msg);
+  }
+}
+    
+    
+====================================
+Example: The WSDL Using WS-Addressing for Faults
+
+<definitions xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl" 
+targetNamespace="http://soacookbook.com/"...>
+<types>
+<xsd:schema>
+<xsd:import namespace="http://soacookbook.com/" 
+schemaLocation="http://localhost:7777/TestWS/HelloAddressingFaultsWSService?xsd=1" />
+</xsd:schema>
+</types>
+
+<message name="sayHello">
+<part name="parameters" element="tns:sayHello" />
+</message>
+<message name="sayHelloResponse">
+<part name="parameters" element="tns:sayHelloResponse" />
+</message>
+<message name="HelloException">
+<part name="fault" element="tns:HelloException" />
+</message>
+
+<portType name="HelloAddressingFaultsWS">
+<operation name="sayHello">
+<input wsaw:Action="http://soacookbook.com/name" 
+message="tns:sayHello" />
+<output wsaw:Action="http://soacookbook.com/greeting" 
+message="tns:sayHelloResponse" />
+<fault message="tns:HelloException" name="HelloException" 
+  wsaw:Action="http://soacookbook.com/myFault" />
+</operation>
+</portType>
+
+<binding name="HelloAddressingFaultsWSPortBinding" 
+type="tns:HelloAddressingFaultsWS">
+
+<wsaw:UsingAddressing />
+
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+style="document" />
+<operation name="sayHello">
+<soap:operation soapAction="" />
+<input>
+<soap:body use="literal" />
+</input>
+<output>
+<soap:body use="literal" />
+</output>
+<fault name="HelloException">
+  <soap:fault name="HelloException" use="literal" />
+</fault>
+</operation>
+</binding>
+<service name="HelloAddressingFaultsWSService">
+<port name="HelloAddressingFaultsWSPort" 
+binding="tns:HelloAddressingFaultsWSPortBinding">
+<soap:address 
+location="http://localhost:7777/TestWS/HelloAddressingFaultsWSService" />
+</port>
+</service>
+</definitions>
+    
+    
+====================================
+Example: Addressing Client that Gets a Fault
+
+package com.soacookbook;
+
+import javax.xml.ws.soap.AddressingFeature;
+
+/**
+ * Calls the WebService with WS-Addressing enabled, 
+ * with the service declaring addressing for an 
+ * exception that can be thrown.
+ */
+public class AddressingFaultClient {
+
+    public static void main(String[] args) {
+        //do something we know we cause a fault
+        sayHello(null);
+    }
+
+    private static void sayHello(String name) {
+        try { 
+            //call Web Service Operation
+            HelloAddressingFaultsWSService service = 
+                    new HelloAddressingFaultsWSService();
+
+            //enable WS-Addressing
+            HelloAddressingFaultsWS port =
+                    service.getHelloAddressingFaultsWSPort(
+                    new AddressingFeature());
+
+            String result = port.sayHello(name);
+            System.out.println("Result = " + result);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+    
+    
+====================================
+---[HTTP response 500]---
+<S:Header>
+  <To xmlns="http://www.w3.org/2005/08/addressing">
+    http://www.w3.org/2005/08/addressing/anonymous
+  </To>
+  <Action xmlns="http://www.w3.org/2005/08/addressing">
+    http://soacookbook.com/myFault
+  </Action>
+
+//other WS-Addressing headers...
+
+<S:Body>
+<S:Fault xmlns:ns4="http://www.w3.org/2003/05/soap-envelope">
+<faultcode>S:Server</faultcode>
+<faultstring>
+  Could not say hello: The name was null or empty.
+</faultstring>
+<detail>
+<ns2:HelloException xmlns:ns2="http://soacookbook.com/">
+  <message>
+    Could not say hello: The name was null or empty.
+  </message>
+</ns2:HelloException>
+    
+    
+====================================
+@Action(..., fault= { 
+  @FaultAction(className=HelloException.class, 
+    value="http://soacookbook.com/myFault")})
+    
+    
+====================================
+Example: SimpleCalcClient.cs
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+
+namespace ConsoleApplication1
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            InvokeCalculator();
+        }
+
+        private static void InvokeCalculator()
+        {
+            localhost.CalculatorWSService service =
+                 new localhost.CalculatorWSService();
+            int result = service.add(6, 9);
+            Console.WriteLine("The result is " + result);
+        }
+    }
+}
+    
+    
+====================================
+Example: Calculator.wsdl
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions ...
+targetNamespace="http://calculator.me.org/" 
+name="CalculatorWSService">
+
+<types>
+<xsd:schema>
+<xsd:import namespace="http://calculator.me.org/" 
+  schemaLocation="http://localhost:8080/CalculatorApp/CalculatorWSService?xsd=1">
+</xsd:import>
+</xsd:schema>
+</types>
+
+<message name="add">
+<part name="parameters" element="tns:add" />
+</message>
+<message name="addResponse">
+<part name="parameters" element="tns:addResponse" />
+</message>
+<portType name="CalculatorWS">
+<operation name="add">
+<input message="tns:add" />
+<output message="tns:addResponse" />
+</operation>
+</portType>
+
+<binding name="CalculatorWSPortBinding" type="tns:CalculatorWS">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+  style="document" />
+<operation name="add">
+<soap:operation soapAction="" />
+<input><soap:body use="literal" /></input>
+<output><soap:body use="literal" /></output>
+</operation>
+</binding>
+
+<service name="CalculatorWSService">
+<port name="CalculatorWSPort" binding="tns:CalculatorWSPortBinding">
+<soap:address location="http://localhost:8080/CalculatorApp/CalculatorWSService" />
+</port>
+</service>
+</definitions>
+    
+    
+====================================
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:tns="http://calculator.me.org/" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  version="1.0" 
+  targetNamespace="http://calculator.me.org/">
+
+  <xs:element name="add" type="tns:add" />
+
+  <xs:element name="addResponse" type="tns:addResponse" />
+
+  <xs:complexType name="add">
+    <xs:sequence>
+      <xs:element name="i" type="xs:int" />
+      <xs:element name="j" type="xs:int" />
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:complexType name="addResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:int" />
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+    
+    
+====================================
+C:\Program Files\Microsoft Visual Studio 8\VC>wsdl 
+/out:C:/oreilly/soacookbook/code/chapters/interop/dotNetClient/Calcul
+atorProxy.cs  http://localhost:8080/CalculatorApp/CalculatorWSService?wsdl
+    
+    
+====================================
+Example: CalculatorProxy.cs
+
+using System;
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Web.Services;
+using System.Web.Services.Protocols;
+using System.Xml.Serialization;
+
+[System.CodeDom.Compiler.GeneratedCodeAttribute("wsdl", "2.0.50727.42")]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+[System.Web.Services.WebServiceBindingAttribute(
+  Name="CalculatorWSPortBinding", Namespace="http://calculator.me.org/")]
+public partial class CalculatorWSService : 
+    System.Web.Services.Protocols.SoapHttpClientProtocol {
+    
+    private System.Threading.SendOrPostCallback addOperationCompleted;
+    
+    public CalculatorWSService() {
+        this.Url = "http://localhost:8080/CalculatorApp/CalculatorWSService";
+    }
+    
+    public event addCompletedEventHandler addCompleted;
+    
+    [System.Web.Services.Protocols.SoapDocumentMethodAttribute("", 
+RequestNamespace="http://calculator.me.org/", 
+ResponseNamespace="http://calculator.me.org/", 
+Use=System.Web.Services.Description.SoapBindingUse.Literal, 
+ParameterStyle=System.Web.Services.Protocols.SoapParameterStyle.Wrapped)]
+
+    [return: System.Xml.Serialization.XmlElementAttribute("return", 
+Form=System.Xml.Schema.XmlSchemaForm.Unqualified)]
+
+    public int add(
+[System.Xml.Serialization.XmlElementAttribute(
+  Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] int i, 
+[System.Xml.Serialization.XmlElementAttribute(
+  Form=System.Xml.Schema.XmlSchemaForm.Unqualified)] int j) {
+        object[] results = this.Invoke("add", new object[] {
+                    i, j});
+        return ((int)(results[0]));
+    }
+    
+    public System.IAsyncResult Beginadd(int i, int j, 
+System.AsyncCallback callback, object asyncState) {
+        return this.BeginInvoke("add", new object[] {
+                    i, j}, callback, asyncState);
+    }
+    
+    public int Endadd(System.IAsyncResult asyncResult) {
+        object[] results = this.EndInvoke(asyncResult);
+        return ((int)(results[0]));
+    }
+    
+    public void addAsync(int i, int j) {
+        this.addAsync(i, j, null);
+    }
+    
+    public void addAsync(int i, int j, object userState) {
+        if ((this.addOperationCompleted == null)) {
+            this.addOperationCompleted = 
+              new System.Threading.SendOrPostCallback(
+                          this.OnaddOperationCompleted);
+        }
+        this.InvokeAsync("add", new object[] {
+                    i,
+                    j}, this.addOperationCompleted, userState);
+    }
+    
+    private void OnaddOperationCompleted(object arg) {
+        if ((this.addCompleted != null)) {
+            System.Web.Services.Protocols.InvokeCompletedEventArgs invokeArgs = 
+((System.Web.Services.Protocols.InvokeCompletedEventArgs)(arg));
+            this.addCompleted(this, new addCompletedEventArgs(invokeArgs.Results, 
+invokeArgs.Error, invokeArgs.Cancelled, invokeArgs.UserState));
+        }
+    }
+    
+    public new void CancelAsync(object userState) {
+        base.CancelAsync(userState);
+    }
+}
+
+[System.CodeDom.Compiler.GeneratedCodeAttribute("wsdl", "2.0.50727.42")]
+public delegate void addCompletedEventHandler(object sender, 
+  addCompletedEventArgs e);
+
+[System.CodeDom.Compiler.GeneratedCodeAttribute("wsdl", "2.0.50727.42")]
+[System.Diagnostics.DebuggerStepThroughAttribute()]
+[System.ComponentModel.DesignerCategoryAttribute("code")]
+public partial class addCompletedEventArgs : 
+    System.ComponentModel.AsyncCompletedEventArgs {
+    
+    private object[] results;
+    
+    internal addCompletedEventArgs(object[] results, 
+      System.Exception exception, bool cancelled, object userState) : 
+            base(exception, cancelled, userState) {
+        this.results = results;
+    }
+    
+    public int Result {
+        get {
+            this.RaiseExceptionIfNecessary();
+            return ((int)(this.results[0]));
+        }
+    }
+}
+    
+    
+====================================
+<xs:complexType name="addResponse">
+  <xs:sequence>
+    <xs:element name="return" type="xs:int" />
+  </xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+Example: GUICalc.cs
+
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Text;
+using System.Windows.Forms;
+
+//GUI that lets user add two integers
+//by invoking web service
+namespace CalcGUI
+{
+    public partial class GUICalc : Form
+    {
+        public GUICalc()
+        {
+            InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e){ }
+
+        //button click handler
+        private void button1_Click(object sender, EventArgs e)
+        {
+            //get user input
+            int x = Convert.ToInt32(textBox1.Text);
+            int y = Convert.ToInt32(textBox2.Text);
+
+            //call the service
+            int result = calculate(x, y);
+            labelResult.Text = Convert.ToString(result);
+
+            //show on form
+            labelResult.Visible = true;
+        }
+
+        //call the service
+        private int calculate(int x, int y)
+        {
+            CalculatorWSService service = 
+                new CalculatorWSService();
+            return service.add(x, y);
+        }
+    }
+}
+    
+    
+====================================
+Example: C# Web Service Template for ASP.NET
+
+using System;
+using System.Web;
+using System.Web.Services;
+using System.Web.Services.Protocols;
+
+[WebService(Namespace = "http://tempuri.org/")]
+[WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1)]
+public class Service : System.Web.Services.WebService
+{
+    public Service () {
+        //Uncomment the following line if using designed components 
+        //InitializeComponent(); 
+    }
+
+    [WebMethod]
+    public string HelloWorld() {
+        return "Hello World";
+    }
+}
+    
+    
+====================================
+Example: Greeting Web Service, Service.asmx
+
+using System;
+using System.Web;
+using System.Web.Services;
+using System.Web.Services.Protocols;
+
+[WebService(
+    Namespace = "http://soacookbook.com/dotnet", 
+    Name="GreetingService", 
+    Description="Returns greetings.")]
+[WebServiceBinding(ConformsTo = WsiProfiles.BasicProfile1_1, 
+    EmitConformanceClaims=true)]
+public class Service : System.Web.Services.WebService
+{
+    public Service () { }
+
+    [WebMethod(MessageName="HelloMsg",
+        Description="Returns a nice greeting.", 
+        CacheDuration=100)]
+    public string niceGreeting(string name) {
+        return "Hello " + name + " from " + 
+            Server.MachineName;
+    }
+}
+    
+    
+====================================
+<?xml version="1.0" encoding="utf-8"?>
+<wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" 
+xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" 
+xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" 
+xmlns:tns="http://soacookbook.com/dotnet" 
+xmlns:s="http://www.w3.org/2001/XMLSchema" 
+xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" 
+xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" 
+targetNamespace="http://soacookbook.com/dotnet" 
+xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+<wsdl:documentation 
+  xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Returns greetings.
+</wsdl:documentation>
+
+  <wsdl:types>
+    <s:schema elementFormDefault="qualified" 
+targetNamespace="http://soacookbook.com/dotnet">
+      <s:element name="HelloMsg">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" 
+name="name" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+      <s:element name="HelloMsgResponse">
+        <s:complexType>
+          <s:sequence>
+            <s:element minOccurs="0" maxOccurs="1" 
+name="HelloMsgResult" type="s:string" />
+          </s:sequence>
+        </s:complexType>
+      </s:element>
+    </s:schema>
+  </wsdl:types>
+
+  <wsdl:message name="HelloMsgSoapIn">
+    <wsdl:part name="parameters" element="tns:HelloMsg" />
+  </wsdl:message>
+  <wsdl:message name="HelloMsgSoapOut">
+    <wsdl:part name="parameters" element="tns:HelloMsgResponse" />
+  </wsdl:message>
+
+  <wsdl:portType name="GreetingServiceSoap">
+    <wsdl:operation name="niceGreeting">
+      <wsdl:documentation 
+xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Returns a nice greeting.
+</wsdl:documentation>
+      <wsdl:input name="HelloMsg" message="tns:HelloMsgSoapIn" />
+      <wsdl:output name="HelloMsg" message="tns:HelloMsgSoapOut" />
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <wsdl:binding name="GreetingServiceSoap" type="tns:GreetingServiceSoap">
+    <wsdl:documentation>
+      <wsi:Claim conformsTo="http://ws-i.org/profiles/basic/1.1" 
+xmlns:wsi="http://ws-i.org/schemas/conformanceClaim/" />
+    </wsdl:documentation>
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="niceGreeting">
+      <soap:operation soapAction="http://soacookbook.com/dotnet/HelloMsg" 
+style="document" />
+      <wsdl:input name="HelloMsg">
+        <soap:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="HelloMsg">
+        <soap:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:binding name="GreetingServiceSoap12" type="tns:GreetingServiceSoap">
+    <soap12:binding transport="http://schemas.xmlsoap.org/soap/http" />
+    <wsdl:operation name="niceGreeting">
+      <soap12:operation soapAction="http://soacookbook.com/dotnet/HelloMsg" 
+style="document" />
+      <wsdl:input name="HelloMsg">
+        <soap12:body use="literal" />
+      </wsdl:input>
+      <wsdl:output name="HelloMsg">
+        <soap12:body use="literal" />
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <wsdl:service name="GreetingService">
+    <wsdl:documentation xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">Returns greetings.
+</wsdl:documentation>
+    <wsdl:port name="GreetingServiceSoap" binding="tns:GreetingServiceSoap">
+      <soap:address location="http://localhost:3416/WebSite1/Service.asmx" />
+    </wsdl:port>
+    <wsdl:port name="GreetingServiceSoap12" binding="tns:GreetingServiceSoap12">
+      <soap12:address location="http://localhost:3416/WebSite1/Service.asmx" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>
+    
+    
+====================================
+POST /WebSite1/Service.asmx HTTP/1.1
+Host: localhost
+Content-Type: text/xml; charset=utf-8
+Content-Length: length
+SOAPAction: "http://soacookbook.com/dotnet/HelloMsg"
+
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Body>
+    <HelloMsg xmlns="http://soacookbook.com/dotnet">
+      <name>string</name>
+    </HelloMsg>
+  </soap:Body>
+</soap:Envelope>
+    
+    
+====================================
+POST /WebSite1/Service.asmx/HelloMsg HTTP/1.1
+Host: localhost
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 9
+
+name=Eben
+    
+    
+====================================
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" 
+        content="application/x-www-form-urlencoded; charset=UTF-8">
+        <title>.NET HTTP Client</title>
+    </head>
+    <body>
+        <form method="POST" target="_blank"
+            action="http://localhost:3416/WebSite1/Service.asmx/HelloMsg">
+            <input name="name" value="Eben" type="text"/>
+            <input type="submit"  />
+        </form>
+    </body>
+</html>
+    
+    
+====================================
+<?xml version="1.0" encoding="utf-8"?>
+<string xmlns="http://soacookbook.com/dotnet">string</string>
+    
+    
+====================================
+Example: soap12.jsp
+
+<%@page contentType="text/html" pageEncoding="UTF-8"%>
+<%@ page import="com.soacookbook.dotnet.*" %>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>SOAP 1.2 Invoker</title>
+    </head>
+    <body>
+    <%
+    try {
+        GreetingService service = new GreetingService();
+        GreetingServiceSoap port = service.getGreetingServiceSoap12();
+
+        HelloMsg parameters = new HelloMsg();
+        parameters.setName("Eben SOAP 1.2");
+        HelloMsgResponse result = port.niceGreeting(parameters);
+        out.println("Result = "+result.getHelloMsgResult());
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+    %>
+    </body>
+</html>
+    
+    
+====================================
+Result = Hello Eben SOAP 1.2 from LUCKY 
+    
+    
+====================================
+<xs:complexType name="add">
+  <xs:sequence>
+    <xs:element name="i" type="xs:int"/>
+    <xs:element name="j" type="xs:int"/>
+  </xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+Example: JavaWsdlDriverClient.rb
+
+require 'soap/wsdlDriver'
+wsdl = 'http://localhost:8080/CalculatorApp/CalculatorWSService?wsdl'
+service = SOAP::WSDLDriverFactory.new(wsdl).create_rpc_driver
+service.wiredump_dev = STDOUT
+
+result = service.add(:i=>'6', :j=>'9')
+puts "Result is %s!" % "#{result.return}" 
+    
+    
+====================================
+Result is 15!
+    
+    
+====================================
+"#{result.return}" 
+    
+    
+====================================
+Result is #<SOAP::Mapping::Object:0x2802094>!
+    
+    
+====================================
+puts "Hello, World"
+    
+    
+====================================
+Example: Ruby Client for .NET Currency Conversion Service
+
+require 'soap/rpc/driver'
+
+#create a connection to the service
+Converter = SOAP::RPC::Driver.new(
+  "http://www.webservicex.net/CurrencyConvertor.asmx",
+  "http://www.webserviceX.net/")
+
+#set the encoding style
+Converter.default_encodingstyle =
+  SOAP::EncodingStyle::ASPDotNetHandler::Namespace
+
+#add the SOAP Action HTTP header
+Converter.add_method_with_soapaction(
+  "ConversionRate",
+  "http://www.webserviceX.net/ConversionRate", 
+  "FromCurrency", "ToCurrency")
+
+#send the SOAP messages to the console
+Converter.wiredump_dev = STDERR
+
+#call the operation and print result
+puts Converter.ConversionRate("USD","CAD")
+    
+    
+====================================
+POST /CurrencyConvertor.asmx HTTP/1.1
+Accept: */*
+Content-Type: text/xml; charset=utf-8
+User-Agent: SOAP4R/1.5.5
+Soapaction: \"http://www.webserviceX.NET/ConversionRate\"
+Content-Length: 432
+Host: www.webservicex.net
+    
+    
+====================================
+def hello() return "Hello, World!"
+end
+puts hello()
+    
+    
+====================================
+<soap:Fault...>
+  <faultcode>soap:Server.ProcessingError</faultcode>
+</soap:Fault>
+    
+    
+====================================
+<soap:operation soapAction="" />
+    
+    
+====================================
+<wsaw:UsingAddressing required="true"/>
+    
+    
+====================================
+[SoapRpcService(
+  RoutingStyle = SoapServiceRoutingStyle.RequestElement)]
+[WebService(...
+    
+    
+====================================
+<microsoft.web.services3>
+  <messaging>
+    <mtom serverMode="always" />
+  </messaging>
+</microsoft.web.services3>
+    
+    
+====================================
+<wsdl:types>
+<xsd:schema>
+<xsd:import namespace="http://soacookbook.com/email" 
+  schemaLocation="http://localhost:8080/EmailService/Email.xsd" />
+</xsd:schema>
+</wsdl:types>
+    
+    
+====================================
+<wsdl:types>
+    <s:schema elementFormDefault="qualified" 
+        targetNamespace="http://soacookbook.com">
+      <s:element name="SomeElement">...
+    
+    
+====================================
+Example: StockQuoteAbstract.wsdl
+
+<definitions name="StockQuote"
+  targetNamespace="http://soacookbook.com/stockquote/defs"
+  xmlns:tns="http://soacookbook.com/quote/defs"
+  xmlns:xsd1="http://soacookbook.com/quote/schemas"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+   <import namespace="http://soacookbook.com/quote/schemas"
+     location="http://soacookbook.com/quote/stockquote.xsd"/>
+
+    <message name="GetLastTradePriceInput">
+        <part name="body" element="xsd1:TradePriceRequest"/>
+    </message>
+
+    <message name="GetLastTradePriceOutput">
+        <part name="body" element="xsd1:TradePrice"/>
+    </message>
+
+    <portType name="StockQuotePortType">
+        <operation name="GetLastTradePrice">
+           <input message="tns:GetLastTradePriceInput"/>
+           <output message="tns:GetLastTradePriceOutput"/>
+        </operation>
+    </portType>
+</definitions>
+    
+    
+====================================
+Example: StockQuoteConcrete.wsdl
+
+<definitions name="StockQuote"
+  targetNamespace="http://soacookbook.com/quote/service"
+  xmlns:tns="http://soacookbook.com/quote/service"
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+  xmlns:defs="http://soacookbook.com/quote/defs"
+  xmlns="http://schemas.xmlsoap.org/wsdl/">
+
+  <import namespace="http://soacookbook.com/quote/defs"
+    location="http://soacookbook.com/quote/StockQuoteAbstract.wsdl"/>
+
+    <binding name="StockQuoteSoapBinding" 
+        type="defs:StockQuotePortType">
+        <soap:binding style="document" 
+          transport="http://schemas.xmlsoap.org/soap/http"/>
+        <operation name="GetLastTradePrice">
+           <soap:operation 
+             soapAction="http://soacookbook.com/GetLastTradePrice"/>
+           <input><soap:body use="literal"/></input>
+           <output><soap:body use="literal"/></output>
+        </operation>
+    </binding>
+
+    <service name="StockQuoteService">
+        <documentation>Returns the current price for a given ticker.
+        </documentation>
+        <port name="StockQuotePort" binding="tns:StockQuoteBinding">
+           <soap:address location="http://soacookbook.com/quote"/>
+        </port>
+    </service>
+</definitions>
+    
+    
+==================

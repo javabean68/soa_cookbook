@@ -1,0 +1,1741 @@
+chapter: Providing SOAP-Based Web Services
+==================
+<?xml version="1.0" encoding="UTF-8"?>
+<endpoints xmlns="http://java.sun.com/xml/ns/jax-ws/ri/runtime" version="2.0">
+  <endpoint name="HelloService" 
+      implementation="com.soacookbook.ch04.HelloServer" url-pattern="/hello" />
+</endpoints>
+    
+    
+====================================
+<wsdl:definitions targetNamespace="http://example.org/ns"; 
+  xmlns:apachesoap="http://xml.apache.org/xml-soap";
+//...
+<element name="anImage">
+  <complexType>
+    <sequence>
+      <element name="image" type="apachesoap:Image">
+    <sequence>
+  <complexType>
+</element>
+    
+    
+====================================
+@WebService
+(endpointInterface="com.soacookbook.MyGeneratedInterface",
+wsdlLocation="/META-INF/wsdl/MyWsdl.wsdl")
+public class MyService implements MyGeneratedInterface { ... }
+    
+    
+====================================
+<binding name="CartEJBPortBinding" type="tns:CartEJB">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document"></soap:binding>
+<operation name="getVersion">
+<soap:operation soapAction=""></soap:operation>
+<input>
+<soap:body use="literal"></soap:body>
+</input>
+<output>
+<soap:body use="literal"></soap:body>
+</output>
+</operation>
+</binding>
+    
+    
+====================================
+<message name="authorSearch">
+<part name="parameters" element="tns:authorSearch"></part>
+</message>
+<message name="authorSearchResponse">
+<part name="parameters" element="tns:authorSearchResponse"></part>
+</message>
+<portType name="Catalog">...</portType>
+    
+    
+====================================
+[ERROR] Non unique body parts! In a port, as per BP 1.1 R2710 operations must have unique operation signaure on the wire for successful dispatch. In port CatalogPort, Operations "authorSearch" and "add" have the same request body block {http://ns.soacookbook.com/catalog}author. Try running wsimport with -extension switch, runtime will try to dispatch using SOAPAction
+  line 70 of http://localhost:8080/CatalogService/Catalog?wsdl
+    
+    
+====================================
+Testcase: searchByAuthorTest(com.soacookbook.catalog.test.CatalogTest):
+Caused an ERROR
+Cannot find dispatch method for Request=[SOAPAction="",Payload={http://ns.soacookbook.com/catalog}author]
+javax.xml.ws.soap.SOAPFaultException: Cannot find dispatch method for Request=[SOAPAction="",Payload={http://ns.soacookbook.com/catalog}author]
+
+    
+    
+====================================
+<xs:schema xmlns:tns="http://ns.soacookbook.com/catalog" ...>
+<xs:element name="searchAuthor" nillable="true" type="tns:Author"></xs:element>
+<xs:element name="addAuthor" nillable="true" type="tns:Author"></xs:element>
+
+<xs:complexType name="Author">
+<xs:sequence>
+<xs:element name="firstName" type="xs:string"></xs:element>
+...
+</xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+<message name="authorSearch">
+<part xmlns:ns4="http://ns.soacookbook.com/catalog" name="author" element="ns4:author"></part>
+</message>
+<message name="authorSearchResponse">
+<part xmlns:ns5="http://ns.soacookbook.com/catalog" name="searchResults" element="ns5:searchResults"></part>
+</message>
+<portType name="Catalog">...</portType>
+    
+    
+====================================
+$ wsgen [options] service-implementation-class
+    
+    
+====================================
+package com.soacookbook;
+
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+
+/**
+ * Used to manually run the wsgen tool against.
+ */
+@WebService(targetNamespace="http://ns.soacookbook.com", 
+  name="GenCatalog", serviceName="GenCatalog")
+public class CatalogToGen {
+
+    @WebMethod
+    @WebResult(name="title")
+    public String getTitle(
+        @WebParam(name="id") String id) {
+
+      return "King Lear";
+   }
+}
+    
+    
+====================================
+javac com/soacookbook/CatalogToGen.java
+    
+    
+====================================
+$ wsgen -verbose -cp . -wsdl -servicename {http://ns.com/}Catalog \
+-keep -r gen -s gen com.soacookbook.CatalogToGen
+
+Note:   ap round: 1
+[ProcessedMethods Class: com.soacookbook.CatalogToGen]
+[should process method: getTitle hasWebMethods: true ]
+[endpointReferencesInterface: false]
+[declaring class has WebSevice: true]
+[returning: true]
+[WrapperGen - method: getTitle(java.lang.String)]
+[method.getDeclaringType(): com.soacookbook.CatalogToGen]
+[requestWrapper: com.soacookbook.jaxws.GetTitle]
+[ProcessedMethods Class: java.lang.Object]
+com\soacookbook\jaxws\GetTitle.java
+com\soacookbook\jaxws\GetTitleResponse.java
+Note:   ap round: 2
+    
+    
+====================================
+<definitions targetNamespace="http://ns.soacookbook.com" 
+  xmlns="http://schemas.xmlsoap.org/wsdl/" 
+  xmlns:tns="http://ns.soacookbook.com" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <types>
+    <xsd:schema>
+      <xsd:import namespace="http://ns.soacookbook.com" 
+        schemaLocation="GenCatalog_schema1.xsd"/>
+    </xsd:schema>
+  </types>
+  <message name="getTitle">
+    <part name="parameters" element="tns:getTitle"/>
+  </message>
+  <message name="getTitleResponse">
+    <part name="parameters" element="tns:getTitleResponse"/>
+  </message>
+  <portType name="GenCatalog">
+    <operation name="getTitle">
+      <input message="tns:getTitle"/>
+      <output message="tns:getTitleResponse"/>
+    </operation>
+  </portType>
+</definitions>
+    
+    
+====================================
+<definitions targetNamespace="http://ns.com/" name="Catalog"
+  xmlns="http://schemas.xmlsoap.org/wsdl/" 
+  xmlns:tns="http://ns.com/" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/">
+  <import namespace="http://ns.soacookbook.com" location="GenCatalog.wsdl"/>
+  <binding name="GenCatalogPortBinding" 
+    type="ns1:GenCatalog" xmlns:ns1="http://ns.soacookbook.com">
+    <soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+      style="document"/>
+    <operation name="getTitle">
+      <soap:operation soapAction=""/>
+      <input>
+        <soap:body use="literal"/>
+      </input>
+      <output>
+        <soap:body use="literal"/>
+      </output>
+    </operation>
+  </binding>
+  <service name="Catalog">
+    <port name="GenCatalogPort" binding="tns:GenCatalogPortBinding">
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
+    </port>
+  </service>
+</definitions>
+    
+    
+====================================
+<wsgen      
+  sei="..."
+  destdir="directory for generated class files"      
+  classpath="classpath" | cp="classpath"
+  resourcedestdir="directory for generated resource files such as WSDLs"
+  sourcedestdir="directory for generated source files"      
+  keep="true|false"
+  verbose="true|false"
+  genwsdl="true|false"      
+  protocol="soap1.1|Xsoap1.2"
+  servicename="..."
+  portname="...">
+  extension="true|false"
+  <classpath refid="..."/>
+</wsgen>
+    
+    
+====================================
+<taskdef name="wsgen" classname="com.sun.tools.ws.ant.WsGen">      
+  <classpath path="jaxws.classpath"/>  
+</taskdef>
+    
+    
+====================================
+package com.soacookbook.catalog.ejb;
+
+import com.soacookbook.ns.catalog.*;
+import javax.ejb.*;
+import javax.jws.*;
+
+/**
+ * Basic Web Service does shopping cart operations.
+ */
+@WebService
+@Stateless
+@Local
+public class CartEJB {
+    public Double getVersion() {
+        return 5.0;
+    }
+}
+
+    
+    
+====================================
+<types>
+<xsd:schema>
+  <xsd:import namespace="http://ejb.catalog.soacookbook.com/" 
+    schemaLocation="http://localhost:8080/CartEJBService/CartEJB?xsd=1">
+  </xsd:import>
+</xsd:schema>
+</types> 
+    
+    
+====================================
+<xs:schema xmlns:tns="http://ejb.catalog.soacookbook.com/" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" version="1.0" 
+  targetNamespace="http://ejb.catalog.soacookbook.com/">
+
+<xs:element name="getVersion" type="tns:getVersion">
+</xs:element>
+
+<xs:element name="getVersionResponse" type="tns:getVersionResponse">
+</xs:element>
+
+<xs:complexType name="getVersion">
+<xs:sequence></xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="getVersionResponse">
+<xs:sequence>
+<xs:element name="return" type="xs:double" minOccurs="0"></xs:element>
+</xs:sequence>
+</xs:complexType>
+</xs:schema>
+    
+    
+====================================
+<service name="CartEJBService">
+<port name="CartEJBPort" binding="tns:CartEJBPortBinding">
+<soap:address location="http://localhost:8080/CartEJBService/CartEJB"></soap:address>
+</port>
+</service>
+    
+    
+====================================
+<portType name="CartEJB">
+    <operation name="getVersion">
+       <input message="tns:getVersion"/>
+       <output message="tns:getVersionResponse"/>
+    </operation>
+</portType>
+    
+    
+====================================
+<binding name="CartEJBPortBinding" type="tns:CartEJB">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="document">
+</soap:binding>
+<operation name="getVersion">
+<soap:operation soapAction=""></soap:operation>
+<input>
+<soap:body use="literal"></soap:body>
+</input>
+<output>
+<soap:body use="literal"></soap:body>
+</output>
+</operation>
+</binding>
+    
+    
+====================================
+@WebMethod(operationName = "add")
+    public int add(@WebParam(name = "i", partName="iPart")
+    
+    
+====================================
+@WebMethod
+public @WebResult(name="doItOne") int 
+        doIt(int x) {
+    return 1;
+}
+    
+    
+====================================
+<message name="doItResponse">
+  <part name="parameters" element="tns:doItResponse"></part>
+</message>
+
+<portType name="Worker">
+  <operation name="doIt">
+    <input message="tns:doIt"></input>
+    <output message="tns:doItResponse"></output>
+  </operation>
+</portType>
+    
+    
+====================================
+<xs:complexType name="doItResponse">
+<xs:sequence>
+<xs:element name="doItOne" type="xs:int"></xs:element>
+</xs:sequence>
+</xs:complexType>
+    
+    
+====================================
+@WebMethod
+public boolean startBatch(){
+    return true;
+}
+    
+    
+====================================
+<xs:schema xmlns:tns="urn:myNs" 
+  xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+  version="1.0" targetNamespace="urn:myNs">
+
+  <xs:element name="startBatch" type="tns:startBatch" />
+
+  <xs:element name="startBatchResponse" type="tns:startBatchResponse" />
+
+  <xs:complexType name="startBatch">
+    <xs:sequence />
+  </xs:complexType>
+
+  <xs:complexType name="startBatchResponse">
+    <xs:sequence>
+      <xs:element name="return" type="xs:boolean"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+    
+    
+====================================
+@WebMethod(operationName="update")
+public void update(int status) {
+  System.out.println("The new status is: " + status);
+}
+    
+    
+====================================
+<operation name="update">
+  <input message="tns:update" /> 
+  <output message="tns:updateResponse" /> 
+</operation>
+    
+    
+====================================
+//Remember WebServiceRef only works in managed environment
+@WebServiceRef(wsdlLocation="http://localhost:8080/CalculatorApp/CalculatorWSService?wsdl")
+public CalculatorWSService service;
+
+service.getCalculatorWSPort();
+port.update(200);
+    
+    
+====================================
+<xs:element name="updateResponse" type="tns:updateResponse" /> 
+<xs:complexType name="updateResponse">
+  <xs:sequence /> 
+</xs:complexType>
+    
+    
+====================================
+@Oneway
+@WebMethod(operationName="update")
+public void update(int status) {
+  System.out.println("The new status is: " + status);
+}
+    
+    
+====================================
+<message name="update">
+  <part name="parameters" element="tns:update" /> 
+</message>
+    
+    
+====================================
+<operation name="update">
+  <soap:operation soapAction="" /> 
+    <input>
+      <soap:body use="literal" /> 
+    </input>
+  </operation>
+    
+    
+====================================
+Example: Credit.xsd Credit Card Schema
+
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+    version="1.0" 
+    targetNamespace="http://ns.soacookbook.com/credit"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="http://ns.soacookbook.com/credit"
+    elementFormDefault="qualified">
+                
+<xs:element name="creditCard" type="tns:CreditCard" />
+
+<xs:element name="authorization" type="tns:Authorization" />
+
+<xs:annotation>
+    <xs:documentation xml:lang="en">
+        A Credit Card contains a number, a cardholder name, 
+        and an expiry date. The date is just an XSD date, 
+        and the others are custom types with constraints.
+    </xs:documentation>
+</xs:annotation>
+<xs:complexType name="CreditCard">
+    <xs:sequence>
+        <xs:element id="cardNumber" name="cardNumber" 
+                type="tns:CardNumber" 
+                minOccurs="1" maxOccurs="1"/>
+                
+        <xs:element id="name" name="name" type="tns:Name" />
+        
+        <xs:element id="expirationDate" name="expirationDate" 
+                type="xs:date" nillable="true" />
+    </xs:sequence>
+</xs:complexType>
+
+<xs:complexType name="Name">
+    <xs:sequence>
+        <xs:element name="firstName" type="tns:NameString"/>
+        <xs:element name="middleInitial" type="tns:InitialString" 
+            nillable="true"/>
+        <xs:element name="lastName" type="tns:NameString"/>
+    </xs:sequence>
+</xs:complexType>
+
+<!-- Names must be at least 2 characters, no more than 35 
+  characters, and consist of alphabetic characters, hyphens, 
+  single quotes, periods and spaces -->
+<xs:simpleType name="NameString">
+    <xs:restriction base="xs:string">
+        <xs:minLength value="2" />
+        <xs:maxLength value="35" />
+        <xs:pattern value="[A-Za-z\-. ]{2,35}" />
+    </xs:restriction>
+ </xs:simpleType>
+
+ <xs:simpleType name="InitialString">
+    <xs:restriction base="xs:string">
+        <xs:minLength value="0" />
+        <xs:maxLength value="1" />
+        <xs:pattern value="[A-Za-z]?" />
+    </xs:restriction>
+ </xs:simpleType>
+     
+ <!--Just simple constraint to keep it this short. 
+ Not good enough for real world.-->
+<xs:simpleType name="CardNumber">
+    <xs:restriction base="xs:string">
+        <xs:pattern value="\^(\d{4}[- ]){3}\d{4}|\d{16}$" />
+        <xs:minLength value="10" />
+        <xs:maxLength value="16" />
+    </xs:restriction>
+</xs:simpleType>
+
+<xs:complexType name="Authorization">
+    <xs:sequence>
+        <xs:element name="amount" type="xs:double"/>
+    </xs:sequence>
+</xs:complexType>
+
+</xs:schema>
+    
+    
+====================================
+Example: Credit.wsdl
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions 
+xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+xmlns:tns="http://ns.soacookbook.com/credit" 
+xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+xmlns="http://schemas.xmlsoap.org/wsdl/" 
+targetNamespace="http://ns.soacookbook.com/credit" 
+name="CreditService">
+    
+<types>
+<xsd:schema>
+<xsd:import namespace="http://ns.soacookbook.com/credit" 
+  schemaLocation="Credit.xsd"/>
+</xsd:schema>
+</types>
+
+<message name="authorizeRequest">
+<part name="creditCard" element="tns:creditCard" />
+</message>
+<message name="authorizeResponse">
+<part name="authorization" element="tns:authorization" />
+</message>
+
+<portType name="CreditAuthorizer">
+<operation name="authorize">
+<input message="tns:authorizeRequest" />
+<output message="tns:authorizeResponse" />
+</operation>
+</portType>
+
+<binding name="CreditAuthorizerPortBinding" 
+  type="tns:CreditAuthorizer">
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+  style="document" />
+<operation name="authorize">
+<soap:operation soapAction="" />
+<input>
+<soap:body use="literal" />
+</input>
+<output>
+<soap:body use="literal" />
+</output>
+</operation>
+</binding>
+
+<service name="CreditService">
+<port name="CreditAuthorizerPort" 
+  binding="tns:CreditAuthorizerPortBinding">
+<soap:address 
+  location="http://localhost:8080/soaCookbookWS/CreditService" />
+</port>
+</service>
+</definitions>
+    
+    
+====================================
+Example: CreditService.java
+
+package com.soacookbook.ch03.validate;
+
+import com.soacookbook.ns.credit.*;
+
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebResult;
+import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+import org.apache.log4j.Logger;
+
+/**
+ * Demonstrates a service that uses JAXB-generated types as 
+ * parameters for a start-from-schema-and-java method.
+ * Uses Credit.wsdl and Credit.xsd.
+ */
+@WebService(
+  name="CreditAuthorizer",
+  serviceName="CreditService",
+  targetNamespace="http://ns.soacookbook.com/credit", 
+  wsdlLocation="WEB-INF/wsdl/ch03/Credit.wsdl")
+public class CreditService {
+  private static final Logger LOGGER = 
+            Logger.getLogger(CreditService.class);
+         
+    /** Creates an instance of CreditService.
+     */
+    public CreditService() {
+        LOGGER.debug("Created provider instance.");
+    }
+    
+    //business method
+    @WebMethod(operationName="authorize")
+    @SOAPBinding(style=SOAPBinding.Style.DOCUMENT,
+     use=SOAPBinding.Use.LITERAL,
+     parameterStyle=SOAPBinding.ParameterStyle.BARE)
+    public @WebResult(name="authorization",
+            targetNamespace="http://ns.soacookbook.com/credit")
+            Authorization
+            
+            authorize(
+            
+            @WebParam(name="creditCard", 
+            mode=WebParam.Mode.IN,
+            targetNamespace="http://ns.soacookbook.com/credit")
+            CreditCard creditCard)  { 
+        
+        LOGGER.debug("Authorizing.");
+        
+        LOGGER.debug("Card Number: " + creditCard.getCardNumber());
+        
+        //get data from compound type
+        String cardNumber = creditCard.getCardNumber();
+        
+        //create custom type for return
+        Authorization auth = new Authorization();
+        //business logic here
+        if (cardNumber.startsWith("4")) {
+            auth.setAmount(2500.0);
+        } else {
+            auth.setAmount(0.0);
+        }
+        
+        LOGGER.debug("Returning auth for amt: " + auth.getAmount());
+        
+        return auth;
+    }
+}
+
+    
+    
+====================================
+Example: SOAP Message Credit Card Request
+
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<creditCard xmlns="http://ns.soacookbook.com/credit">
+<cardNumber>4011111111111111</cardNumber>
+<name>
+<firstName>Phineas</firstName>
+<middleInitial>J</middleInitial>
+<lastName>Fogg</lastName>
+</name>
+<expirationDate>2015-04-27-07:00</expirationDate>
+</creditCard></S:Body></S:Envelope>
+    
+    
+====================================
+Example: SOAP Message XML for Authorization Return
+
+<?xml version="1.0" ?>
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Body>
+<authorization xmlns="http://ns.soacookbook.com/credit">
+<amount>2500.0</amount>
+</authorization>
+</S:Body>
+</S:Envelope>
+    
+    
+====================================
+Example: CreditCard.java
+
+package com.soacookbook.ns.credit;
+
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlSchemaType;
+import javax.xml.bind.annotation.XmlType;
+import javax.xml.datatype.XMLGregorianCalendar;
+
+/**
+ * Java class for CreditCard complex type. Comments ommitted.
+ */
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlType(name = "CreditCard", propOrder = {
+    "cardNumber",
+    "name",
+    "expirationDate"
+})
+public class CreditCard {
+
+    @XmlElement(required = true)
+    protected String cardNumber;
+    @XmlElement(required = true)
+    protected Name name;
+    @XmlElement(required = true, nillable = true)
+    @XmlSchemaType(name = "date")
+    protected XMLGregorianCalendar expirationDate;
+
+//getters and setters for each field ommitted.
+    
+    
+====================================
+<project name="soacookbookServer" default="all">
+    <property file="soacookbookServer.properties"/>
+
+    <!-- PATHS -->
+    <path id="cp">
+        <pathelement location="${classes.dir}"/>
+        <pathelement location="${gen.classes.dir}"/>
+        <pathelement location="${javaee.jar}"/>
+        <pathelement location="${common.jar}"/>
+        <pathelement location="${config.dir}"/>
+        <pathelement location="${commons.lang.jar}"/>
+        <pathelement location="${service.schemas.classes.dir}"/>
+        <pathelement location="${sun.ws.rt.jar}"/>
+        <pathelement location="${log4j.jar}"/>
+        <pathelement location="${client.jar}"/>
+    </path>
+
+    <path id="cp.test">
+        <!-- Added src.test.dir to allow a specific log4j.xml 
+            file just for the tests -->
+        <pathelement location="${src.test.dir}"/>
+        <pathelement location="${test.classes.dir}"/>
+        <pathelement location="${junit.jar}"/>
+        <path refid="cp" />
+    </path>
+
+    <path id="srcs.path">
+        <pathelement path="${src.dir}" />
+        <pathelement path="${src.gen.dir}" />
+    </path>
+        
+    <!-- BUILD TARGETS -->
+    <target name="all" depends="init,clean,prepare, 
+        schema-class-gen,compile,build-war,deploy" />
+    
+    <!-- INIT & TASK DEFS -->
+    <target name="init">
+        <echo message="Testing for glassfish root directory"/>
+        <fail>
+            <condition>
+                <not>
+                    <available file="${javaee.jar}"/>
+                </not>
+            </condition>    
+            Please open the user.properties file and set the 
+            gf.root property to point
+            to your glassfish install directory.  
+            (default /opt/glassfish on Linux and 
+            c:/glassfish-v2 on windows)
+        </fail>        
+
+        <echo message="Testing for gf.password.file setting in user.properties"/>
+
+        <fail>
+            <condition>
+                <not>
+                    <available file="${gf.password.file}"/>
+                </not>
+            </condition>    
+
+            Please open the user.properties file and set the gf.password.file property to point
+            to the absolute path on your machine of this file.  This is required for the
+            glassfish deploy task (which does not work on relative paths).
+        </fail>        
+      
+        <echo message="Using Path Separator: ${path.separator}"/>
+
+        <taskdef name="junit" classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
+            <classpath path="${junit.task.path}" />
+            <classpath path="${junit.jar}" />
+        </taskdef>
+
+        <taskdef name="xjc" classname="com.sun.tools.xjc.XJCTask">
+            <classpath path="${xjc.task.path}"/>
+        </taskdef>
+        
+        <taskdef name="gf-deploy" 
+                 classname="org.apache.tools.ant.taskdefs.optional.sun.appserv.DeployTask"
+                 classpath="${deploy.cp}" />
+    </target>
+    <!-- END INIT -->
+    
+    <!-- CLEAN -->
+    <target name="clean">
+        <echo message="-----Cleaning-----" />
+        <delete dir="${dist.dir}"/>
+        <delete dir="${build.dir}"/>
+        <delete dir="${test.dir}"/>
+        <delete dir="${src.gen.dir}" />
+    </target>
+
+    <!-- PREPARE -->
+    <target name="prepare">
+        <mkdir dir="${dist.dir}"/>
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${ear.lib.dir}"/>
+        <mkdir dir="${src.gen.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${gen.classes.dir}"/>
+        <mkdir dir="${ejb.dependencies.classes.dir}"/>
+        <mkdir dir="${test.dir}"/>
+        <mkdir dir="${test.classes.dir}"/>
+        <mkdir dir="${test.report.dir}"/>
+    </target>
+    
+    <!-- RUN JAXB TO GENERATE JAVA FROM SCHEMA-->
+    <target name="schema-class-gen">
+        <echo message="---Generating Java src from Schema---" />
+        <xjc destdir="${src.gen.dir}"
+             extension="false">
+            <schema dir="${schemas.dir}"
+                    includes="**/*.schemalet, 
+                    ${schemas.includes.pattern}"/>
+        </xjc>
+    </target>
+
+    <!-- COMPILE CLASSES-->
+    <target name="compile">
+        <echo message="-----Compiling-----" />
+        <javac compiler="modern" debug="${debug}" fork="true"
+            source="${source.java.version}"
+            target="${target.java.version}" 
+            excludes="**/client/**" 
+            destdir="${classes.dir}">
+
+            <src path="${src.gen.dir}"/>
+            <src path="${src.dir}"/>
+            <classpath refid="cp"/>
+        </javac>
+    </target>
+
+    <!-- BUILD WAR -->
+    <target name="build-war">
+        <echo message="-----Building WAR-----" />
+        <war destfile="${build.dir}/${war.name}" 
+            webxml="${webinf.dir}/web.xml">
+            <manifest>
+                <attribute name="Manifest-Version" value="1.0"/>
+                <attribute name="Built-By" value="${user.name}"/>
+            </manifest>
+            <webinf  dir="${config.meta.inf.dir}" 
+                includes="**/*.wsdl,**/*.xsd"/>
+            <lib file="${client.jar}" />
+            <classes dir="${build.dir}/classes" 
+                excludes="**/ejb/**"/>
+            
+            <fileset dir="${root.dir}/jsp" includes="*.jsp" />
+        </war>
+    </target>
+    
+    <!-- DEPLOY TO GLASSFISH-->
+    <!-- Undeploy happens automatically on a new deploy so it 
+      does not need to be called explicitly -->
+    <target name="deploy">
+        <echo message="Deploying ${war.name}"/>
+        <gf-deploy user="${gf.username}" 
+                   passwordfile="${gf.password.file}"
+                   host="${gf.server.address}" 
+                   port="${gf.adminport}"
+                   file="${build.dir}/${war.name}" 
+                   asinstalldir="${gf.root}"/>
+        <property name="artifact.deployed" value="true" />
+    </target>
+
+ </project>
+    
+    
+====================================
+Example: soacookbookServer.properties
+
+project.name=soaCookbookWS
+
+#USER PROPERTIES: LINUX
+#gf.password.file=/home/ehewitt/soacookbook/repository/code/chapters/ws/soacookbookServer.properties
+#gf.root=/opt/glassfish91u1
+
+#USER PROPERTIES: WINDOWS
+gf.password.file=C:\\oreilly/soacookbook/code/chapters/ws/soacookbookServer.properties
+gf.root=C:\\programs/glassfishv2ur1
+
+#GENERAL JAVA
+source.java.version=1.6
+target.java.version=1.6
+debug=on
+
+#DIRS
+root.dir=.
+build.dir=./build
+classes.dir=${build.dir}/classes
+gen.classes.dir=${build.dir}/gen-classes
+dist.dir=dist
+docs.dir=./docs
+src.dir=./src/java
+src.gen.dir=./src/gen
+src.xml.dir=./src/xml
+src.test.dir=./src/test
+test.dir=./test
+test.classes.dir=${test.dir}/classes
+test.report.dir=${test.dir}/report
+tmp.dir=${build.dir}/tmp
+
+config.dir=./config
+webinf.dir=${config.dir}/WEB-INF
+config.meta.inf.dir=${config.dir}/META-INF
+
+ear.lib.dir=${build.dir}/lib
+schemas.dir=${config.meta.inf.dir}/wsdl/ch03
+
+ejb.dependencies.classes.dir=${build.dir}/ejb-dependency-classes
+#location of the .class files for classes generated from schemas used by the service and the client
+service.schemas.classes.dir=${root.dir}/../ws/build/classes
+#generated classes from wsimport go here
+gen.client.package.name=com.dte.soa.soacookbook.wsclient
+
+#PATTERNS
+ejb.dir.pattern=**/ejb/**
+spi.includes.pattern=**/*.spi.*
+schemas.dir=config/META-INF/wsdl/ch03
+schemas.includes.pattern=**/*.xsd
+
+#DEPENDENCIES: LIB DIR
+lib.dir=../../lib
+commons.lang.jar=${lib.dir}/commons-lang-2.3.jar
+javaee.jar=${lib.dir}/javaee.jar
+junit.jar=${lib.dir}/junit-4.4.jar
+log4j.jar=${lib.dir}/log4j-1.2.9.jar
+webservices-rt.jar=${lib.dir}/webservices-rt.jar
+
+#From the Client project, to be included in WAR
+client.jar=../client/dist/soaCookbookClient.jar
+
+#ARTIFACT NAMES
+client.classes.jar=${project.name}-client.jar
+ejb-jar.name=${project.name}-ejb.jar
+ear.name=${project.name}.ear
+log4j.xml=${config.dir}/log4j.xml
+log4j.props.jar=log4jProps.jar
+war.name=${project.name}.war
+war.name=${project.name}.war
+svc.common.jar.name=svc-common.jar
+
+#GLASSFISH DEPLOYMENT
+deploy.target=glassfish
+gf.server.address=localhost
+gf.domain.name=soacookbookdomain
+
+#You may need to modify these for your system
+# GlassFish requires the AS_ADMIN_PASSWORD to be in a file.  
+# The task requires an absolute path.  We are pointing directly 
+# to this file.
+gf.username=admin
+gf.adminport=5050
+gf.port=8080
+gf.esb.port=18181
+
+AS_ADMIN_PASSWORD=adminadmin
+deploy.cp=${sun.app.ant.jar}${path.separator}${gf.root}/lib/admin-cli.jar${path.separator}${gf.root}/lib/appserv-rt.jar${path.separator}${gf.root}/lib/appserv-admin.jar
+server.location=http://${gf.server.address}:${gf.port}
+
+#2.1
+sun.app.ant.jar=${lib.dir}/sun-appserv-ant.jar
+sun.ws.tools.jar=${lib.dir}/webservices-tools.jar
+sun.ws.rt.jar=${lib.dir}/webservices-rt.jar
+
+#TASKS
+junit.task.path=${lib.dir}/ant-junit.jar
+xjc.task.path=${sun.app.ant.jar}${path.separator}${sun.ws.tools.jar}${path.separator}${sun.ws.rt.jar}
+
+
+    
+    
+====================================
+@WebMethod
+@SOAPBinding(style=SOAPBinding.Style.DOCUMENT,
+    use=SOAPBinding.Use.LITERAL, 
+    parameterStyle=SOAPBinding.ParameterStyle.WRAPPED)
+public @WebResult(name="searchResults",
+       targetNamespace="http://ns.soacookbook.com/catalog") SearchResults
+       authorSearch(
+       @WebParam(name="author", mode=WebParam.Mode.IN,
+       targetNamespace="http://ns.soacookbook.com/catalog") Author author) {
+//...
+    
+    
+====================================
+Response<T> invokeAsync(T msg)
+
+Future<?> invokeAsync(T msg, AsyncHandler<T> handler)
+    
+    
+====================================
+Example: Standalone File with JAX-WS Binding Customizations
+
+<jaxws:bindings wsdlLocation="http://ns.soacookbook.com/Calculator.wsdl">
+    <jaxws:packageName="com.soacookbook.calc">
+      <jaxws:javadoc>The 'add' operations in this package will be
+      available asynchronously.
+      </jaxws:javadoc>
+    </jaxws:packageName>
+    <jaxws:bindings node="wsdl:operation[@name='add']">
+      <jaxws:enableAsyncMapping>true</jaxws:enableAsyncMapping>
+    </jaxws:bindings>
+<jaxws:bindings>
+    
+    
+====================================
+Example: An Inline jaxws:bindings Element
+
+<wsdl:definitions targetNamespace="..." 
+  xmlns:jaxws="http:java.sun.com/xml/ns/jaxws">
+  <wsdl:portType name="CalculatorWS">
+    <wsdl:operation name="add">
+        <wsdl:input message="tns:add"></input>
+        <wsdl:output message="tns:addResponse"></output>
+    </wsdl:operation>
+    <jaxws:bindings>
+        <jaxws:enableAsyncMapping>true</jaxws:enableAsyncMapping>
+    <jaxws:bindings>
+  </wsdl:portType>
+</wsdl:definitions>
+    
+    
+====================================
+T invoke(T request) 
+    
+    
+====================================
+Example: The WSDL for an Authorizer Service
+
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions name="GatewayService" 
+    xmlns="http://schemas.xmlsoap.org/wsdl/" 
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" 
+    targetNamespace="http://ns.soacookbook.com/gateway"
+    xmlns:tns="http://ns.soacookbook.com/gateway">
+    
+    <types>
+        <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+            targetNamespace="http://ns.soacookbook.com/gateway">
+          <xs:element name="gatewayRequest" type="xs:string" />
+          <xs:element name="gatewayResponse" type="xs:string" />
+        </xs:schema>
+    </types>
+    
+    <message name="gatewayRequest">
+        <part name="parameters" element="tns:gatewayRequest"></part>
+    </message>
+    
+    <message name="gatewayResponse">
+        <part name="parameters" element="tns:gatewayResponse"></part>
+    </message>
+    
+    <portType name="Gateway">
+        <operation name="authorize">
+            <input message="tns:gatewayRequest"></input>
+            <output message="tns:gatewayResponse"></output>
+        </operation>
+    </portType>
+    
+    <binding name="GatewayPortBinding" type="tns:Gateway">
+        <soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+            style="document"></soap:binding>
+                    
+        <operation name="authorize">
+            <soap:operation soapAction=""></soap:operation>
+            <input>
+                <soap:body use="literal"></soap:body>
+            </input>
+            <output>
+                <soap:body use="literal"></soap:body>
+            </output>
+        </operation>
+    </binding>
+    <service name="GatewayService">
+        <port name="GatewayPort" binding="tns:GatewayPortBinding">
+            <soap:address 
+              location="http://localhost:8080/GatewayService/Gateway">
+            </soap:address>
+        </port>
+    </service>
+</definitions>
+    
+    
+====================================
+Example: Provider<SOAPMessage>
+          Implementation
+
+package com.soacookbook.ch04;
+
+import java.io.IOException;
+import java.util.UUID;
+import javax.xml.namespace.QName;
+import javax.xml.soap.MessageFactory;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPElement;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPFactory;
+import javax.xml.soap.SOAPHeader;
+import javax.xml.soap.SOAPHeaderElement;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.ws.Provider;
+import javax.xml.ws.Service.Mode;
+import javax.xml.ws.ServiceMode;
+import javax.xml.ws.WebServiceProvider;
+import org.apache.log4j.Logger;
+
+/**
+ * Demonstrates simple Provider.
+ */
+@WebServiceProvider(
+  serviceName="GatewayService", 
+  portName="GatewayPort",
+  targetNamespace="http://ns.soacookbook.com/gateway", 
+  wsdlLocation="WEB-INF/wsdl/Gateway.wsdl")
+@ServiceMode(Mode.MESSAGE)
+public class MyProvider implements Provider<SOAPMessage> {
+  private static final Logger LOGGER = 
+            Logger.getLogger(MyProvider.class);
+
+    public MyProvider() {
+        LOGGER.debug("Created provider instance.");
+    }
+
+    public SOAPMessage invoke(SOAPMessage request) {
+        SOAPMessage response = null;
+        
+        try {
+            LOGGER.debug("Received request:\n");
+            
+            //Dump request to console
+            request.writeTo(System.out);
+            
+            LOGGER.debug("Building SOAP Response.");
+            String user = request.getSOAPBody().getTextContent();
+            response = createResponse(user);
+            
+        } catch (SOAPException ex) {
+            ex.printStackTrace();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        
+        return response;
+    }
+    
+    public SOAPMessage createResponse(String user) 
+                 throws SOAPException, IOException {
+        
+        LOGGER.debug("Creating SOAP Response for user: " + user);
+        
+        //Create a response message
+        MessageFactory mf = MessageFactory.newInstance();
+        SOAPFactory sf = SOAPFactory.newInstance();
+        SOAPMessage response = mf.createMessage();
+        
+        //Could go to database here to check creds
+        if ("jgosling".equals(user)) {
+            //Create Header
+            QName q = new QName("urn:myNS", "sso");
+            SOAPHeader h  = response.getSOAPHeader();
+            SOAPHeaderElement headerEl = h.addHeaderElement(q);
+            headerEl.addAttribute(new QName("gateway"), 
+                    "192.168.1.102");
+            headerEl.addAttribute(new QName("authToken"), 
+                    UUID.randomUUID().toString());
+
+            //Create Body
+            SOAPBody body = response.getSOAPBody();
+            SOAPElement respContent = 
+                    body.addChildElement("gatewayResponse");
+            respContent.setValue("ADMIN");
+
+        } else {
+            
+            //Create body for unauthorized user, and no header
+            SOAPBody body = response.getSOAPBody();
+            SOAPElement respContent = 
+                    body.addChildElement("gatewayResponse");
+            respContent.setValue("N/A");
+        }
+        
+        response.saveChanges();
+        
+        LOGGER.debug("Returning response.");
+        
+        response.writeTo(System.out);
+
+        return response;
+    }
+}
+
+    
+    
+====================================
+DPL5306:Servlet Web Service Endpoint [com.soacookbook.ch04.MyProvider] 
+listening at address [http://localhost:8080/soaCookbookWS/GatewayService]
+
+    
+    
+====================================
+Example: Provider Unit Test
+
+package com.soacookbook.ch04.test;
+
+import static org.junit.Assert.*;
+import com.soacookbook.ns.gateway.*;
+import java.util.*;
+import org.apache.log4j.Logger;
+import org.junit.*;
+
+/**
+ * JUnit test for the authorization provider.
+ */
+public class ProviderTest {
+    private static final Logger LOGGER = 
+            Logger.getLogger(ProviderTest.class);
+
+    private GatewayService authService;
+    private Gateway gateway; 
+            
+    @Before
+    public void setup() {
+        authService = new GatewayService();
+        gateway = authService.getGatewayPort();
+    }
+        
+    //This user should get authorized in Admin role
+    @Test
+    public void testProviderAuth() throws Exception {
+        LOGGER.debug("Executing.");
+                
+        String response = gateway.authorize("jgosling");
+
+        LOGGER.debug("Response: " + response);        
+        assertEquals("ADMIN", response);
+    }
+
+    //This user should fail authorization 
+    @Test
+    public void testProviderNotAuth() throws Exception {
+        LOGGER.debug("Executing.");
+                
+        String response = gateway.authorize("bgates");
+        assertEquals("N/A", response);
+    }
+}
+    
+    
+====================================
+Received request:
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header/>
+<S:Body>
+<gatewayRequest 
+  xmlns="http://ns.soacookbook.com/gateway">jgosling</gatewayRequest>
+</S:Body>
+</S:Envelope>
+
+Building SOAP Response.
+
+Creating SOAP Response for user: jgosling
+
+4/15/08-15:05 DEBUG  com.soacookbook.ch04.MyProvider.createResponse - Response ready: 
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+<SOAP-ENV:Header>
+  <sso xmlns="urn:myNS" authToken="2878f38f-5515..." 
+      gateway="192.168.1.102"/>
+</SOAP-ENV:Header>
+<SOAP-ENV:Body>
+  <gatewayResponse>ADMIN</gatewayResponse>
+</SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+    
+    
+====================================
+Example: HandlerService.java
+
+package com.soacookbook;
+
+import javax.jws.HandlerChain;
+import javax.jws.WebMethod;
+import javax.jws.WebParam;
+import javax.jws.WebService;
+
+/**
+ * Uses a handler chain on the server.
+ */
+@WebService
+@HandlerChain(file="myHandlers.xml")
+public class HandlerWebService {
+    
+    @WebMethod(operationName = "doWork")
+    public String doWork(
+        @WebParam(name = "msg") String msg) {
+        
+        System.out.println("doing work");
+        return "Processed work for: " + msg;
+    }
+}
+    
+    
+====================================
+Example: myHandlers.xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<handler-chains xmlns="http://java.sun.com/xml/ns/javaee">
+<handler-chain>
+    <handler>
+        <handler-class>com.soacookbook.LogHandler</handler-class>
+        <handler-class>com.soacookbook.LateNotifyHandler</handler-class>
+    </handler>
+</handler-chain>
+</handler-chains>
+    
+    
+====================================
+LH: handleMessage
+LH: logToOut
+Inbound message:
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+<S:Header/>
+<S:Body><ns2:doWork xmlns:ns2="http://soacookbook.com/">
+<msg>SOME IMPORTANT JOB</msg></ns2:doWork></S:Body>
+</S:Envelope>
+
+doing work
+LH: handleMessage
+LH: logToOut
+Outbound message:
+LH: close
+    
+    
+====================================
+Example: LogHandler.java
+
+package com.soacookbook;
+
+import java.io.IOException;
+import javax.xml.namespace.QName;
+import javax.xml.soap.SOAPException;
+import javax.xml.ws.handler.MessageContext;
+import javax.xml.ws.handler.soap.SOAPHandler;
+import javax.xml.ws.handler.soap.SOAPMessageContext;
+import java.util.Set;
+
+/**
+ * Logs inbound SOAP messages to the console.
+ */
+public class LogHandler 
+    implements SOAPHandler<SOAPMessageContext> {
+    
+    public Set<QName> getHeaders() {
+        System.out.println("LH: getHeaders");
+        return null;
+    }
+    
+    public boolean handleMessage(SOAPMessageContext ctx) {
+        System.out.println("LH: handleMessage");
+        logToSystemOut(ctx);
+        return true;
+    }
+    
+    public boolean handleFault(SOAPMessageContext ctx) {
+        System.out.println("LH: handleFault");
+        logToSystemOut(ctx);
+        return true;
+    }
+    
+    // nothing to clean up
+    public void close(MessageContext messageContext) {
+        System.out.println("LH: close");
+    }
+    
+    private void logToSystemOut(SOAPMessageContext ctx) {
+        System.out.println("LH: logToOut");
+        Boolean outboundProperty = (Boolean)
+            ctx.get (MessageContext.MESSAGE_OUTBOUND_PROPERTY);
+        
+        if (outboundProperty.booleanValue()) {
+            System.out.println("\nOutbound message:");
+        } else {
+            try {
+                System.out.println("\nInbound message:");
+                ctx.getMessage().writeTo(System.out);
+            } catch (SOAPException ex) {
+                ex.printStackTrace();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }        
+    }
+}
+    
+    
+====================================
+Example: Stateful Web Service using WebServiceContext
+
+package com.soacookbook;
+
+import javax.annotation.Resource;
+import javax.jws.WebService;
+import javax.servlet.http.HttpSession;
+import javax.xml.ws.WebServiceContext;
+import javax.xml.ws.handler.MessageContext;
+
+@WebService
+public class CounterContextWS {
+    @Resource
+    private WebServiceContext wsContext;
+    
+    public int getCounter(){
+        MessageContext mc = wsContext.getMessageContext();
+        HttpSession session = ((javax.servlet.http.HttpServletRequest)mc.get(
+            MessageContext.SERVLET_REQUEST)).getSession();
+
+        Integer count = (Integer)session.getAttribute("count");
+        if (count == null) {
+            count = 0;
+            System.out.println("New Session ID=" + session.getId());
+        }
+        count++;
+        session.setAttribute("count", count);
+        return count;
+    }
+}
+    
+    
+====================================
+Example: Stateful Web Service Client JSP
+
+<%@page contentType="text/html" pageEncoding="UTF-8" 
+  import="com.soacookbook.*, javax.xml.ws.*"%>
+<html>
+    <head><title>Counter Service</title></head>
+    <body>
+        <h1>Counter Context Service</h1>
+        <hr/>
+    <%
+    try {
+        CounterContextWS port = null;
+        if (session.isNew()){
+            CounterContextWSService service = new CounterContextWSService();
+            port = service.getCounterContextWSPort();
+        
+            session.setAttribute("port", port);
+                    
+            ((BindingProvider)port).getRequestContext().put(
+            BindingProvider.SESSION_MAINTAIN_PROPERTY, true);
+        }
+        port = (CounterContextWS)session.getAttribute("port");
+
+        int result = port.getCounter();
+        out.print(result);
+        result = port.getCounter();
+        out.print("<br/>");
+        out.print(result);
+        
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+    %>
+    </body>
+</html>
+    
+    
+====================================
+New Session ID=2aece0c189a202a05699f7e44893
+New Session ID=2af2bfb1860fdd0f7debc1286ea9
+    
+    
+====================================
+@WebMethod
+public @WebResult(name="title") String 
+  secureGetTitle(
+  @WebParam(name="id") String id,
+  @WebParam(name="usernameToken",
+  header=true, mode=WebParam.Mode.IN) 
+  String usernameToken) {...}
+    
+    
+====================================
+Example: Partial WSDL with Headers Specified
+
+<message name="secureGetTitle">
+<part name="parameters" element="tns:secureGetTitle"></part>
+<part name="usernameToken" element="tns:usernameToken"></part>
+</message>
+
+<portType name="CatalogService">
+  <operation name="secureGetTitle" 
+    parameterOrder="parameters usernameToken">
+  <input message="tns:secureGetTitle"></input>
+  <output message="tns:secureGetTitleResponse"></output>
+  </operation>
+</portType>
+
+<binding name="CatalogPortBinding" type="tns:CatalogService">
+  <soap:binding transport="http://schemas.xmlsoap.org/soap/http" 
+    style="document"></soap:binding>
+  <operation name="secureGetTitle">
+  <soap:operation soapAction=""></soap:operation>
+  <input>
+    <soap:body use="literal" parts="parameters"></soap:body>
+    <soap:header message="tns:secureGetTitle" part="usernameToken" 
+      use="literal">
+    </soap:header>
+  </input>
+  <output>
+    <soap:body use="literal"></soap:body>
+  </output>
+  </operation>
+</binding>
+
+    
+    
+====================================
+@WebService
+public class MyService {
+  private static final QName MY_HEADER = 
+    new QName("http://ns.soacookbook.com","headerName");
+
+@Resource
+WebServiceContext context;
+
+@WebMethod
+public void sayHello(String name) {
+  //RI only
+  HeaderList headers = context.getMessageContext().get(
+    JAXWSProperties.INBOUND_HEADER_LIST_PROPERTY);
+  Header header = headers.get(MY_HEADER);
+  //do something with header
+}
+}
+    
+    
+====================================
+@WebMethod(operationName="greet", 
+    action="http://soacookbook.com/Hello/sayHello") 
+public String greet(
+    @WebParam(name="name") String name) {
+    return "Hi " + name;
+}
+    
+    
+====================================
+<operation name="greet">
+   <soap:operation soapAction="http://soacookbook.com/Hello/sayHello"/>
+    
+    
+====================================
+//indicate to use soap action
+((javax.xml.ws.BindingProvider)port).getRequestContext().put(
+  javax.xml.ws.BindingProvider.SOAPACTION_USE_PROPERTY, Boolean.TRUE);
+        
+//Specify the soap action uri
+((javax.xml.ws.BindingProvider)port).getRequestContext().put(
+  javax.xml.ws.BindingProvider.SOAPACTION_URI_PROPERTY, "http://soacookbook/myService/myOp");
+    
+    
+====================================
+@WebService
+@MTOM
+public class MyService { ... }
+    
+    
+====================================
+@WebService
+public class Hello {
+    @Resource
+    private WebServiceContext wsContext;
+
+    public void doWork(){
+        MessageContext mContext = wsContext.getMessageContext();
+    ...}
+}
+    
+    
+====================================
+Example: Email Verifier Web Service Requiring Credentials in SOAP
+        Headers
+
+package com.soacookbook;
+
+import javax.jws.WebParam;
+import javax.jws.WebService;
+import javax.xml.ws.Holder;
+
+/*
+ * Very simple web service that shows how to define a service
+ * that accepts SOAP headers. This is frequently useful for user 
+ * credentials, an authorization token, or some other 
+ * identifier. 
+ * 
+ * Making param mode INOUT means your type must be a Holder.
+ */
+@WebService
+public class EmailCheck  {
+
+    private static String NO_CREDENITALS_MSG = 
+            "You must be registered and supply a " +
+            "valid username and password to use this service.";
+    
+    /**
+     * The single op we'll expose on the service. Checks the
+     * value of the email address passed in.
+     * @param email The address clients want to verify.
+     * @param username The username of a hypoethetically 
+     * pre-registered user so that only authorized users
+     * can access the service.
+     * @param password the passsword for this 'registered' user.
+     * @return a string indicating if the email address is
+     * valid or not.
+     */
+    public String verify(
+        @WebParam(mode=WebParam.Mode.IN, 
+            name="email")String email, 
+        @WebParam(mode=WebParam.Mode.INOUT, header=true, 
+            name="username") Holder<String> username,
+        @WebParam(mode=WebParam.Mode.INOUT, header=true,
+            name="password") Holder<String> password){
+        
+        if (!isValidUser(username, password))
+            return NO_CREDENITALS_MSG;
+        
+        //Silly check. Robust business logic here...
+        if (email != null && email.endsWith(".com")) {
+            return "VALID";
+        } else {
+            return "INVALID";
+        }
+    }
+
+    /*Checks that the supplied username/password combination
+     is valid. Replace this with a run to a database or LDAP.
+     */
+    private boolean isValidUser(Holder<String> username, 
+            Holder<String> password) {
+
+        boolean suppliedUsername = username != null && 
+                !username.value.isEmpty();
+
+        boolean suppliedPassword = password != null && 
+                !password.value.isEmpty();
+
+        if (suppliedUsername && suppliedPassword) {
+            //log
+            System.out.println("Username: " + username.value);
+            System.out.println("Password: " + password.value);
+
+            //check registered user credentials in LDAP
+            //or database or something
+            boolean validUser = username.value.equals("eben") && 
+                    password.value.equals("secret");
+            if (validUser) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
+    
+    
+====================================
+Example: Email Verifier Web Service Client That Passes SOAP
+        Headers
+
+package headerclient;
+
+import com.soacookbook.headerClient.EmailCheckService;
+import com.soacookbook.headerClient.EmailCheck;
+import com.soacookbook.headerClient.Verify;
+import com.soacookbook.headerClient.VerifyResponse;
+
+import javax.xml.ws.Holder;
+
+/**
+ * Invokes a web service that checks the validity of an 
+ * email address. The web service requires a registered
+ * user's credentials as SOAP headers, so we use a
+ * {@code javax.xml.ws.Holder<T>}  to pass the username 
+ * and password.
+ */
+public class EmailHeaderClient {
+
+    /**
+     * Command line client invokes the web service, 
+     * passing header data along with the operation parameter.
+     */
+    public static void main(String... args) {
+        
+        String emailToCheck = "me@example.com";
+        try {
+            
+            EmailCheckService service = new EmailCheckService();
+            EmailCheck port = service.getEmailCheckPort();
+            
+            //This is the email address we want to check
+            Verify params = new Verify();
+            params.setEmail(emailToCheck);
+            
+            //Used for header data, because username is a String
+            Holder<String> username = new Holder<String>();
+            
+            //Holder's value is of type T
+            username.value = "eben";
+            
+            //Same deal for password header
+            Holder<String> password = new Holder<String>();
+            password.value = "secret1";
+            
+            //Note that we pass the SOAP header into the op
+            VerifyResponse result = 
+                    port.verify(params, username, password);
+            
+            System.out.println("Email check result:  " + 
+                    result.getReturn());
+            
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+}
+
+    
+    
+====================================
+C:\oreilly\soacookbook\code\chapters\HeaderClient>java -jar dist/HeaderClient.jar
+Email check result:  You must be registered and supply a valid username and password 
+to use this service.
+
+    
+    
+====================================
+C:\oreilly\soacookbook\code\chapters\HeaderClient>java -jar dist/HeaderClient.jar
+Email check result:  VALID
+    
+    
+==================
